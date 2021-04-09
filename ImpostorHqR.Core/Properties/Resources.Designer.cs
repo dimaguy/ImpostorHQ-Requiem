@@ -95,7 +95,7 @@ namespace ImpostorHqR.Core.Properties {
         ///
         ///function Authenticate() 
         ///{
-        ///    document.getElementById(&quot;titleh1&quot;).innerHTML = &quot;ImpostorMin - Hang on, connecting to &quot; + titleInitial;
+        ///    document.getElementById(&quot;titleh1&quot;).innerHTML = &quot;ImpostorHqR - Hang on, connecting to &quot; + titleInitial;
         ///    connection = new WebSocket(url);
         ///	connection.onopen = function(evt) 
         ///	{

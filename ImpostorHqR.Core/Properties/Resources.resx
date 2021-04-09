@@ -171,7 +171,7 @@
 		&lt;div class="header"&gt;
 			&lt;div class="header" style="display: inline;"&gt;
 				&lt;h1 style="display: inline; vertical-align: middle; color:#ff0000; font-family: headerFont;" id = "titleh1"&gt;Impostor&lt;b style="color: #41BB3F;"&gt;Min %label%&lt;/b&gt;&lt;/h1&gt;
-				&lt;noscript style="display:inline; color:red;"&gt;ImpostorMin is not compatible with this browser&lt;/noscript&gt;
+				&lt;noscript style="display:inline; color:red;"&gt;ImpostorHqR is not compatible with this browser&lt;/noscript&gt;
 				&lt;div class="header-right"&gt;
 					&lt;!-- TODO: add an animation --&gt;
 				&lt;/div&gt;
@@ -208,7 +208,7 @@ var titleInitial = "%label%";
 
 function Authenticate() 
 {
-    document.getElementById("titleh1").innerHTML = "ImpostorMin - Hang on, connecting to " + titleInitial;
+    document.getElementById("titleh1").innerHTML = "ImpostorHqR - Hang on, connecting to " + titleInitial;
     connection = new WebSocket(url);
 	connection.onopen = function(evt) 
 	{
@@ -240,7 +240,7 @@ function Received(str)
 		if (str === "Welcome") 
 		{
 			console.log("authenticated !");
-            document.getElementById("titleh1").innerHTML = "ImpostorMin " + "&lt;b style=\"color: #41BB3F; \"&gt; | " + titleInitial + " |&lt;/b&gt;";
+            document.getElementById("titleh1").innerHTML = "ImpostorHqR " + "&lt;b style=\"color: #41BB3F; \"&gt; | " + titleInitial + " |&lt;/b&gt;";
             connectionState = 2;
 			Authenticated();
 			Plot();
@@ -362,8 +362,8 @@ function Plot(){
 		
 		
 		&lt;div class="header" style="display: inline;"&gt;
-				&lt;h1 style="display: inline; vertical-align: middle; color:#ff0000; font-family: headerFont;" id="titleh1"&gt;ImpostorMin &lt;b style="color: #41BB3F; "&gt; | %txt% |&lt;/b&gt;&lt;/h1&gt;
-				&lt;noscript style="display:inline; color:red;"&gt;ImpostorMin is not compatible with this browser&lt;/noscript&gt;
+				&lt;h1 style="display: inline; vertical-align: middle; color:#ff0000; font-family: headerFont;" id="titleh1"&gt;ImpostorHqR &lt;b style="color: #41BB3F; "&gt; | %txt% |&lt;/b&gt;&lt;/h1&gt;
+				&lt;noscript style="display:inline; color:red;"&gt;ImpostorHqR is not compatible with this browser&lt;/noscript&gt;
 				&lt;div class="header-right"&gt;
 					&lt;!-- TODO: add an animation --&gt;
 				&lt;/div&gt;
@@ -385,7 +385,7 @@ function Plot(){
 			var box = document.getElementById("Console");
 			function Authenticate() 
 			{
-				document.getElementById("titleh1").innerHTML = "ImpostorMin - Hang on, connecting to " + titleInitial;
+				document.getElementById("titleh1").innerHTML = "ImpostorHqR - Hang on, connecting to " + titleInitial;
 				connection = new WebSocket(url);
 				connection.onopen = function(evt) 
 				{
@@ -417,7 +417,7 @@ function Plot(){
 					if (str === "Welcome") 
 					{
 						console.log("authenticated !");
-						document.getElementById("titleh1").innerHTML = "ImpostorMin " + "&lt;b style=\"color: #41BB3F; \"&gt; | " + titleInitial + " |&lt;/b&gt;";
+						document.getElementById("titleh1").innerHTML = "ImpostorHqR " + "&lt;b style=\"color: #41BB3F; \"&gt; | " + titleInitial + " |&lt;/b&gt;";
 						connectionState = 2;
 						Authenticated();
 					} 
@@ -507,8 +507,8 @@ function Plot(){
 	&lt;body&gt;
 		&lt;div class="header"&gt;
 			&lt;div class="header" style="display: inline;"&gt;
-				&lt;h1 style="display: inline; vertical-align: middle; color:#ff0000; font-family: headerFont;" id="titleh1"&gt;ImpostorMin&lt;b style="color: #41BB3F; "&gt; | %txt% |&lt;/b&gt;&lt;/h1&gt;
-				&lt;noscript style="display:inline; color:red;"&gt;ImpostorMin is not compatible with this browser&lt;/noscript&gt;
+				&lt;h1 style="display: inline; vertical-align: middle; color:#ff0000; font-family: headerFont;" id="titleh1"&gt;ImpostorHqR&lt;b style="color: #41BB3F; "&gt; | %txt% |&lt;/b&gt;&lt;/h1&gt;
+				&lt;noscript style="display:inline; color:red;"&gt;ImpostorHqR is not compatible with this browser&lt;/noscript&gt;
 			
 			&lt;/div&gt;
 		&lt;/div&gt;
@@ -538,7 +538,7 @@ function Plot(){
 
 				function Authenticate() 
 				{
-                    document.getElementById("titleh1").innerHTML = "ImpostorMin - Hang on, connecting to " + titleInitial;
+                    document.getElementById("titleh1").innerHTML = "ImpostorHqR - Hang on, connecting to " + titleInitial;
                     connection = new WebSocket(url);
 					connection.onopen = function(evt) 
 					{
@@ -570,7 +570,7 @@ function Plot(){
 						if (str === "Welcome") 
 						{
 							console.log("authenticated !");
-                            document.getElementById("titleh1").innerHTML = "ImpostorMin " + "&lt;b style=\"color: #41BB3F; \"&gt; | " + titleInitial + " |&lt;/b&gt;";
+                            document.getElementById("titleh1").innerHTML = "ImpostorHqR " + "&lt;b style=\"color: #41BB3F; \"&gt; | " + titleInitial + " |&lt;/b&gt;";
                             connectionState = 2;
 							Authenticated();
 						} 
@@ -695,8 +695,8 @@ function Plot(){
 	&lt;body&gt;
 		&lt;div class="header"&gt;
 			&lt;div class="header" style="display: inline;"&gt;
-				&lt;h1 style="display: inline; vertical-align: middle; color:#ff0000; font-family: headerFont;"&gt;ImpostorMin&lt;b style="color: #41BB3F;"&gt;%txt%&lt;/b&gt;&lt;/h1&gt;
-				&lt;noscript style="display:inline; color:red;"&gt;Impostormin is not compatible with this browser&lt;/noscript&gt;
+				&lt;h1 style="display: inline; vertical-align: middle; color:#ff0000; font-family: headerFont;"&gt;ImpostorHqR&lt;b style="color: #41BB3F;"&gt;%txt%&lt;/b&gt;&lt;/h1&gt;
+				&lt;noscript style="display:inline; color:red;"&gt;ImpostorHqR is not compatible with this browser&lt;/noscript&gt;
 			
 			&lt;/div&gt;
 		&lt;/div&gt;
