@@ -1,0 +1,709 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="GraphPageHtml" xml:space="preserve">
+    <value>&lt;html&gt;
+	&lt;head&gt;
+		&lt;meta charset="utf-8"&gt;
+		&lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+		&lt;title&gt;%label%&lt;/title&gt;
+
+		&lt;meta name="msapplication-TileColor" content="#ffffff"&gt;
+		&lt;meta name="theme-color" content="#ffffff"&gt;
+			&lt;link rel="stylesheet" href="water.css"&gt;
+			&lt;link rel="stylesheet" href="align.css"&gt;
+			&lt;link rel="stylesheet" href="header.css"&gt;
+		&lt;style&gt;
+            html, body {
+                font-family: 'Open Sans', 'Lucida Grande', 'Arial', 'Helvetica', 'sans-serif', 'headerFont';
+                background-color: #141414;
+                max-width: none;
+            }
+
+			.container {
+				display: inline;
+			}
+
+				.container #text {
+					width: 80%;
+				}
+
+				.container .btn {
+					position: absolute;
+					right: -75px;
+					padding: 16px;
+				}
+            div.smoothie-chart-tooltip {
+                background: #444;
+                padding: 1em;
+                margin-top: 20px;
+                font-family: consolas;
+                color: white;
+                font-size: 10px;
+                pointer-events: none;
+            }
+            @font-face {
+                font-family: headerFont;
+                src: url('font/AlfaSlabOne-Regular.ttf') format('truetype');
+            }
+		&lt;/style&gt;
+		&lt;script type="text/javascript" src="moment.js"&gt;&lt;/script&gt;
+		&lt;script type="text/javascript" src="chart.js"&gt;&lt;/script&gt;
+		&lt;script type="text/javascript" src="chart.streaming.js"&gt;&lt;/script&gt;    	
+	&lt;/head&gt;
+	&lt;body&gt;
+		&lt;div class="header"&gt;
+			&lt;div class="header" style="display: inline;"&gt;
+				&lt;h1 style="display: inline; vertical-align: middle; color:#ff0000; font-family: headerFont;" id = "titleh1"&gt;Impostor&lt;b style="color: #41BB3F;"&gt;Min %label%&lt;/b&gt;&lt;/h1&gt;
+				&lt;noscript style="display:inline; color:red;"&gt;ImpostorMin is not compatible with this browser&lt;/noscript&gt;
+				&lt;div class="header-right"&gt;
+					&lt;!-- TODO: add an animation --&gt;
+				&lt;/div&gt;
+			&lt;/div&gt;
+		&lt;/div&gt;
+		&lt;p&gt;&lt;/p&gt;
+		&lt;div style="height: 100%; width: 100%; display: grid; grid-template-rows:auto auto; grid-template-columns:%width%% auto;"&gt;
+			&lt;div&gt;
+				&lt;div&gt;
+					%graphs%
+				&lt;/div&gt;
+			&lt;/div&gt;
+	   &lt;/div&gt;
+	   
+	   &lt;script defer&gt;
+			
+			%main%
+			
+		&lt;/script&gt;
+	   
+	&lt;/body&gt;
+&lt;/html&gt;</value>
+  </data>
+  <data name="GraphPageMainJs" xml:space="preserve">
+    <value>var handle = "%handle%";// replace
+var connection = null;
+var connectionState = 0;
+var url  = "ws://" + document.location.hostname + ":%port%";// replace
+var titleInitial = "%label%";
+
+%var%
+
+%ctx%
+
+function Authenticate() 
+{
+    document.getElementById("titleh1").innerHTML = "ImpostorMin - Hang on, connecting to " + titleInitial;
+    connection = new WebSocket(url);
+	connection.onopen = function(evt) 
+	{
+		// authenticate insecurely
+		var request = 
+		{
+			Handle: handle,
+			Secure: false
+		};
+
+		var baseMessage = 
+		{
+			Stage: 0,
+			Data: JSON.stringify(request)
+		};
+
+		connection.send(JSON.stringify(baseMessage));
+		connection.onmessage = function(evt) 
+		{
+			Received(evt.data);
+		};
+	}
+}
+
+function Received(str) 
+{
+	if (connectionState === 0) 
+	{
+		if (str === "Welcome") 
+		{
+			console.log("authenticated !");
+            document.getElementById("titleh1").innerHTML = "ImpostorMin " + "&lt;b style=\"color: #41BB3F; \"&gt; | " + titleInitial + " |&lt;/b&gt;";
+            connectionState = 2;
+			Authenticated();
+			Plot();
+		} 
+		else if (str === "HNF") 
+		{
+			console.log("handle not found.");
+			// fail connection
+			// how?
+			// user is trying to probe the server. Display a message to inform them about that.
+		}
+	}
+	
+	else if (connectionState === 1) 
+	{
+		// not possible
+	}
+	
+	else if (connectionState === 2) 
+	{
+		Process(str);
+	}
+}
+
+function Process(str){
+	var receivedJson = JSON.parse(str);
+	console.log("Rx: "  + str + "\n" + receivedJson);
+	%receivers%
+}
+
+function Authenticated() {
+	// show message
+}
+
+window.onload = onload();
+
+function onload() {
+	Authenticate();
+}
+
+function Plot(){
+	%plot%
+}</value>
+  </data>
+  <data name="GraphSiteGrapgJs" xml:space="preserve">
+    <value>var %varname% = new Chart(%ctx%, {
+	type: 'line',
+	data: {
+		datasets: [{
+			label: '%label%',						// *
+			borderColor: '%bcolor%',				// replace settings here
+			backgroundColor: '%bgcolor%',			// *
+			lineTension: 0,								// *
+			borderDash: [8, 4]							// *
+	
+		}]
+	},
+	
+	options: {
+		responsive: true,
+		maintainAspectRatio: false,
+		scales: {
+			yAxes: [{
+				ticks: {
+					beginAtZero: true,
+					precision: 0
+				}
+			}],
+			xAxes: [
+			{
+				type: 'realtime',
+				realtime: {
+					delay: %delay%,							// *
+					duration: %duration%,					// replace settings here
+					onRefresh: function (chart) {
+						chart.data.datasets[0].data.push({
+							x: Date.now(),
+							y: %var%						// replace var dataset here
+						});
+					}
+				}
+			}
+			]
+		}
+	},
+});</value>
+  </data>
+  <data name="OneWayConsoleHtmlFull" xml:space="preserve">
+    <value>&lt;html&gt;
+	&lt;head&gt;
+		&lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+		&lt;meta name="theme-color" content="#ffffff"&gt;
+		&lt;link rel="stylesheet" href="water.css"&gt;
+		&lt;style&gt;
+            html, body {
+                font-family: 'Open Sans', 'Lucida Grande', 'Arial', 'Helvetica', 'sans-serif', 'headerFont';
+                background-color: #141414;
+                max-width: none;
+            }
+
+			.container {
+				display: inline;
+			}
+
+			.container #text {
+				width: 80%;
+			}
+
+		
+            @font-face {
+                font-family: headerFont;
+                src: url('font/AlfaSlabOne-Regular.ttf') format('truetype');
+            }
+		&lt;/style&gt;
+		
+	&lt;/head&gt;
+	&lt;body&gt;
+		
+		
+		
+		&lt;div class="header" style="display: inline;"&gt;
+				&lt;h1 style="display: inline; vertical-align: middle; color:#ff0000; font-family: headerFont;" id="titleh1"&gt;ImpostorMin &lt;b style="color: #41BB3F; "&gt; | %txt% |&lt;/b&gt;&lt;/h1&gt;
+				&lt;noscript style="display:inline; color:red;"&gt;ImpostorMin is not compatible with this browser&lt;/noscript&gt;
+				&lt;div class="header-right"&gt;
+					&lt;!-- TODO: add an animation --&gt;
+				&lt;/div&gt;
+		&lt;/div&gt;
+		
+		&lt;div style="height: 100%; width: 100%; display: grid; grid-template-rows:auto auto; grid-template-columns:100% auto;"&gt;
+			&lt;div&gt;
+				&lt;textarea style="color:%color%; height:150%; width:100%; resize: none;" name="Console" id="Console" placeholder="%mainplaceholder%" readonly&gt;&lt;/textarea&gt;
+			&lt;/div&gt;
+		&lt;/div&gt;
+		
+		&lt;script defer&gt; 
+			
+			var titleInitial = "%txt%";
+			var handle = "%handle%";// replace
+			var connection = null;
+			var connectionState = 0;
+			var url  = "ws://" + document.location.hostname + ":%port%";// replace		
+			var box = document.getElementById("Console");
+			function Authenticate() 
+			{
+				document.getElementById("titleh1").innerHTML = "ImpostorMin - Hang on, connecting to " + titleInitial;
+				connection = new WebSocket(url);
+				connection.onopen = function(evt) 
+				{
+					// authenticate insecurely
+					var request = 
+					{
+						Handle: handle,
+						Secure: false
+					};
+			
+					var baseMessage = 
+					{
+						Stage: 0,
+						Data: JSON.stringify(request)
+					};
+			
+					connection.send(JSON.stringify(baseMessage));
+					connection.onmessage = function(evt) 
+					{
+						Received(evt.data);
+					};
+				}
+			}
+			
+			function Received(str) 
+			{
+				if (connectionState === 0) 
+				{
+					if (str === "Welcome") 
+					{
+						console.log("authenticated !");
+						document.getElementById("titleh1").innerHTML = "ImpostorMin " + "&lt;b style=\"color: #41BB3F; \"&gt; | " + titleInitial + " |&lt;/b&gt;";
+						connectionState = 2;
+						Authenticated();
+					} 
+					else if (str === "HNF") 
+					{
+						console.log("handle not found.");
+						// fail connection
+						// how?
+						// user is trying to probe the server. Display a message to inform them about that.
+					}
+				}
+				
+				else if (connectionState === 1) 
+				{
+					// not possible
+				}
+				
+				else if (connectionState === 2) 
+				{
+					Process(str);
+				}
+			}
+			
+			function Authenticated() {
+				// show message
+			}
+			
+			
+			var firstCell = null;
+			function Process(message) {
+				var data = JSON.parse(message);
+				
+				if(data.Clear === true) {
+					box.value = "";
+					return;
+				}
+			
+				if(data.Set === true)
+				{
+					box.value = data.Message;
+					return;
+				}
+				else
+				{
+					box.value += data.Message;
+				}
+			}
+			
+			window.onload = onload();
+			
+			function onload() {
+				Authenticate();
+			}
+			
+		
+		&lt;/script&gt;
+		
+	&lt;/body&gt;
+&lt;/html&gt;</value>
+  </data>
+  <data name="SimpleApiPageFull" xml:space="preserve">
+    <value>&lt;html&gt;
+	&lt;head&gt;
+		&lt;style&gt;
+            html, body {
+                font-family: 'Open Sans', 'Lucida Grande', 'Arial', 'Helvetica', 'sans-serif', 'headerFont';
+                background-color: #141414;
+                max-width: none;
+            }
+
+			.container {
+				display: inline;
+			}
+
+			.container #text {
+				width: 80%;
+			}
+
+		
+            @font-face {
+                font-family: headerFont;
+                src: url('font/AlfaSlabOne-Regular.ttf') format('truetype');
+            }
+		&lt;/style&gt;
+		
+	&lt;/head&gt;
+	&lt;body&gt;
+		&lt;div class="header"&gt;
+			&lt;div class="header" style="display: inline;"&gt;
+				&lt;h1 style="display: inline; vertical-align: middle; color:#ff0000; font-family: headerFont;" id="titleh1"&gt;ImpostorMin&lt;b style="color: #41BB3F; "&gt; | %txt% |&lt;/b&gt;&lt;/h1&gt;
+				&lt;noscript style="display:inline; color:red;"&gt;ImpostorMin is not compatible with this browser&lt;/noscript&gt;
+			
+			&lt;/div&gt;
+		&lt;/div&gt;
+		&lt;p&gt;&lt;/p&gt;
+		&lt;div style="height: 100%; width: 100%; display: grid; grid-template-rows:auto auto; grid-template-columns:50% auto;"&gt;
+	
+		&lt;div&gt;
+			&lt;table style="color: %color%" id="main"&gt;&lt;tr&gt;
+			&lt;!-- elements are inserted here automatically by the API client --&gt;
+				
+				&lt;thead&gt;
+					
+			
+				&lt;/thead&gt;
+				
+			&lt;/table&gt;
+			
+			&lt;script defer&gt;
+                var titleInitial = "%txt%";
+				var handle = "%handle%";// replace
+				var connection = null;
+				var connectionState = 0;
+				var url  = "ws://" + document.location.hostname + ":%port%";// replace
+				var parent = document.getElementById("main");
+				var table = parent.getElementsByTagName('tbody')[0];
+				var createdFirstRow = false;
+
+				function Authenticate() 
+				{
+                    document.getElementById("titleh1").innerHTML = "ImpostorMin - Hang on, connecting to " + titleInitial;
+                    connection = new WebSocket(url);
+					connection.onopen = function(evt) 
+					{
+						// authenticate insecurely
+						var request = 
+						{
+							Handle: handle,
+							Secure: false
+						};
+				
+						var baseMessage = 
+						{
+							Stage: 0,
+							Data: JSON.stringify(request)
+						};
+				
+						connection.send(JSON.stringify(baseMessage));
+						connection.onmessage = function(evt) 
+						{
+							Received(evt.data);
+						};
+					}
+				}
+				
+				function Received(str) 
+				{
+					if (connectionState === 0) 
+					{
+						if (str === "Welcome") 
+						{
+							console.log("authenticated !");
+                            document.getElementById("titleh1").innerHTML = "ImpostorMin " + "&lt;b style=\"color: #41BB3F; \"&gt; | " + titleInitial + " |&lt;/b&gt;";
+                            connectionState = 2;
+							Authenticated();
+						} 
+						else if (str === "HNF") 
+						{
+							console.log("handle not found.");
+							// fail connection
+							// how?
+							// user is trying to probe the server. Display a message to inform them about that.
+						}
+					}
+					
+					else if (connectionState === 1) 
+					{
+						// not possible
+					}
+					
+					else if (connectionState === 2) 
+					{
+						Process(str);
+					}
+				}
+				
+				function Authenticated() {
+					// show message
+				}
+
+
+                var firstCell = null;
+				function Process(message) {
+					var data = JSON.parse(message);
+					if(data.Clear === true) {
+                        createdFirstRow = false;
+						while(table.hasChildNodes())
+						{
+							table.removeChild(table.firstChild);
+						}
+                        return;
+					}
+
+                    var newRow;
+                    var newCell;
+                    if(data.Set === true)
+					{
+						if(!createdFirstRow)
+						{
+							console.log("creating first row for the set operation.");
+                            newRow = table.insertRow();
+                            newRow.style.backgroundColor = data.Color;
+                            firstCell = newRow.insertCell(0);
+                            createdFirstRow = true;
+						}
+						firstCell.innerHTML = data.Message;
+                        firstCell.backgroundColor = data.Color;
+                    }
+					else
+					{
+                        newRow = table.insertRow();
+                        newRow.style.backgroundColor = data.Color;
+                        newCell = newRow.insertCell();
+                        var newMessage = document.createMessageNode(data.Message);
+						newCell.appendChild(newMessage);
+					}
+				}
+				
+				window.onload = onload();
+				
+				function onload() {
+					Authenticate();
+				}
+							
+		&lt;/script&gt;
+		&lt;/div&gt;
+	  &lt;/div&gt;
+	&lt;/body&gt;
+&lt;/html&gt;</value>
+  </data>
+  <data name="TableSiteElement" xml:space="preserve">
+    <value>&lt;tr&gt;
+	&lt;td&gt;
+		%text%
+	&lt;/td&gt;
+&lt;/tr&gt;</value>
+  </data>
+  <data name="TableSiteEndHtml" xml:space="preserve">
+    <value>&lt;/table&gt;
+		&lt;/div&gt;
+	  &lt;/div&gt;
+	&lt;/body&gt;
+&lt;/html&gt;</value>
+  </data>
+  <data name="TableSiteStartHtml" xml:space="preserve">
+    <value>&lt;html&gt;
+	&lt;head&gt;
+		&lt;style&gt;
+            html, body {
+                font-family: 'Open Sans', 'Lucida Grande', 'Arial', 'Helvetica', 'sans-serif', 'headerFont';
+                background-color: #141414;
+                max-width: none;
+            }
+
+			.container {
+				display: inline;
+			}
+
+				.container #text {
+					width: 80%;
+				}
+
+				.container .btn {
+					position: absolute;
+					right: -75px;
+					padding: 16px;
+				}
+            @font-face {
+                font-family: headerFont;
+                src: url('font/AlfaSlabOne-Regular.ttf') format('truetype');
+            }
+		&lt;/style&gt;
+	
+	&lt;/head&gt;
+	&lt;body&gt;
+		&lt;div class="header"&gt;
+			&lt;div class="header" style="display: inline;"&gt;
+				&lt;h1 style="display: inline; vertical-align: middle; color:#ff0000; font-family: headerFont;"&gt;ImpostorMin&lt;b style="color: #41BB3F;"&gt;%txt%&lt;/b&gt;&lt;/h1&gt;
+				&lt;noscript style="display:inline; color:red;"&gt;Impostormin is not compatible with this browser&lt;/noscript&gt;
+			
+			&lt;/div&gt;
+		&lt;/div&gt;
+		&lt;p&gt;&lt;/p&gt;
+		&lt;div style="height: 100%; width: 100%; display: grid; grid-template-rows:auto auto; grid-template-columns:50% auto;"&gt;
+	
+		&lt;div&gt;
+			&lt;table style="color: %color%"&gt;</value>
+  </data>
+</root>
