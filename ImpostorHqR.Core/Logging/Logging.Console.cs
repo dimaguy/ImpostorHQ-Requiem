@@ -1,4 +1,5 @@
 ﻿using ImpostorHqR.Core.Impostor;
+using ImpostorHqR.Extension.Api.Interface.Logging;
 using ImpostorHqR.Extensions.Api.Interface.Logging;
 using Microsoft.Extensions.Logging;
 

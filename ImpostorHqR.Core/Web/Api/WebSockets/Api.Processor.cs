@@ -5,6 +5,7 @@ using ImpostorHqR.Core.Logging;
 using ImpostorHqR.Core.Web.Api.WebSockets.Auth;
 using ImpostorHqR.Core.Web.Api.WebSockets.Auth.Responses;
 using ImpostorHqR.Core.Web.Api.WebSockets.Handles;
+using ImpostorHqR.Extension.Api.Interface.Logging;
 using ImpostorHqR.Extensions.Api.Interface.Logging;
 
 namespace ImpostorHqR.Core.Web.Api.WebSockets
@@ -131,7 +132,6 @@ namespace ImpostorHqR.Core.Web.Api.WebSockets
 
             if (handle.Secure)
             {
-
                 client.Push(new RequestForPasswordResponse());
                 client.Stage = AuthStage.RequestPassword;
             }

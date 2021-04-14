@@ -10,6 +10,7 @@ using ImpostorHqR.Core.Web.Http.Server.Response;
 using ImpostorHqR.Core.Web.Http.Server.Response.Fields;
 using ImpostorHqR.Core.Web.Page.Generator.Api.ApiConsolePage.Splicer;
 using ImpostorHqR.Core.Web.Page.Generator.Api.ApiTablePage;
+using ImpostorHqR.Extension.Api.Interface.Logging;
 using ImpostorHqR.Extension.Api.Interface.Web.Page.Api.Console;
 using ImpostorHqR.Extensions.Api.Interface.Logging;
 
@@ -63,7 +64,7 @@ namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiConsolePage
             var webHandle = new SpecialHandler(handle, async (client) =>
             {
                 await client.SafeWriteAsync(this.HtmlBytes);
-                LogManager.Instance.Log(new LogEntry()
+                await LogManager.Instance.Log(new LogEntry()
                 {
                     Message = $"Served Simple Console Api Page [{handle}] to {client.Client.RemoteEndPoint}.",
                     Source = this,

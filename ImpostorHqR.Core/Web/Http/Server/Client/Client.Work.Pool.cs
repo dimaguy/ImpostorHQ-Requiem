@@ -11,6 +11,7 @@ using ImpostorHqR.Core.Logging;
 using ImpostorHqR.Core.Web.Http.Server.IO;
 using ImpostorHqR.Core.Web.Http.Server.Request;
 using ImpostorHqR.Extension.Api.Interface.Helpers;
+using ImpostorHqR.Extension.Api.Interface.Logging;
 using ImpostorHqR.Extensions.Api.Interface.Logging;
 
 namespace ImpostorHqR.Core.Web.Http.Server.Client
@@ -45,7 +46,7 @@ namespace ImpostorHqR.Core.Web.Http.Server.Client
         {
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
             ThreadPool.SetMaxThreads(ConfigHolder.Instance.ResourcePoolSize, 1000);
-            var tmr = new System.Timers.Timer(1000) {AutoReset = true};
+            var tmr = new System.Timers.Timer(1000) { AutoReset = true };
             tmr.Elapsed += Tick;
             tmr.Start();
         }
@@ -93,7 +94,7 @@ namespace ImpostorHqR.Core.Web.Http.Server.Client
                 }
                 catch (Exception e)
                 {
-                    LogManager.Instance.Log(new LogEntry()
+                    await LogManager.Instance.Log(new LogEntry()
                     {
                         Message = $"Http error: {e.ToString()}",
                         Source = this,

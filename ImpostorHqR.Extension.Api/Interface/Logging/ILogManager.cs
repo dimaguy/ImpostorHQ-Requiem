@@ -1,4 +1,6 @@
-﻿namespace ImpostorHqR.Extensions.Api.Interface.Logging
+﻿using System.Threading.Tasks;
+
+namespace ImpostorHqR.Extension.Api.Interface.Logging
 {
     public interface ILogManager
     {
@@ -6,7 +8,7 @@
         /// This function will log to the disk.
         /// </summary>
         /// <param name="entry"></param>
-        void Log(LogEntry entry);
+        ValueTask Log(LogEntry entry);
     }
 
     public struct LogEntry
@@ -26,7 +28,6 @@
             this.Message = message;
             this.Type = type;
         }
-
     }
 
     public enum LogType
