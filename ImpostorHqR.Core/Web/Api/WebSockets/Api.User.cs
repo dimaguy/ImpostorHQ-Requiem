@@ -2,6 +2,7 @@
 using System;
 using System.Threading.Tasks;
 using ImpostorHqR.Core.Logging;
+using ImpostorHqR.Extension.Api.Interface.Logging;
 using ImpostorHqR.Extensions.Api.Interface.Logging;
 
 namespace ImpostorHqR.Core.Web.Api.WebSockets
@@ -27,17 +28,26 @@ namespace ImpostorHqR.Core.Web.Api.WebSockets
             }
             catch (Fleck.WebSocketException)
             {
-                OnDisconnected?.Invoke(this);
-                this.Connected = false;
+                closed();
+            }
+            catch (Fleck.ConnectionNotAvailableException)
+            {
+                closed();
             }
             catch (Exception ex)
             {
-                LogManager.Instance.Log(new LogEntry()
+                await LogManager.Instance.Log(new LogEntry()
                 {
                     Message = $"Error in API user send: {ex}",
                     Source = this,
                     Type = LogType.Error
                 });
+            }
+
+            void closed()
+            {
+                OnDisconnected?.Invoke(this);
+                this.Connected = false;
             }
         }
 

@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ImpostorHqR.Core.Logging;
 using ImpostorHqR.Core.Web.Http.Server.Request;
+using ImpostorHqR.Extension.Api.Interface.Logging;
 using ImpostorHqR.Extensions.Api.Interface.Logging;
 
 namespace ImpostorHqR.Core.Web.Http.Server.Client

@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using ImpostorHqR.Core.Logging;
 using ImpostorHqR.Core.ObjectPool.Pools.StringBuilder;
 using ImpostorHqR.Extension.Api.Interface.Helpers.ObjectPool.Included;
+using ImpostorHqR.Extension.Api.Interface.Logging;
 using ImpostorHqR.Extensions.Api.Interface.Logging;
 
 namespace ImpostorHqR.Core.Web.Http.Server.IO
@@ -54,7 +55,7 @@ namespace ImpostorHqR.Core.Web.Http.Server.IO
             }
             catch (Exception ex)
             {
-                LogManager.Instance.Log(new LogEntry()
+                await LogManager.Instance.Log(new LogEntry()
                 {
                     Message = $"Http line read error: {ex.ToString()}",
                     Type = LogType.Error
