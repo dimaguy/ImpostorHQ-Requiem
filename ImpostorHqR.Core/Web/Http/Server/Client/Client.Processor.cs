@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using ImpostorHqR.Core.Configuration;
 using ImpostorHqR.Core.Logging;
 using ImpostorHqR.Core.Web.Http.Handler;
@@ -28,6 +32,30 @@ namespace ImpostorHqR.Core.Web.Http.Server.Client
 
         public static int ConcurrentFileTransfers => (Cfg.ResourcePoolSize - ResourcePool.CurrentCount);
 
+        private static readonly ConcurrentDictionary<(string,IPAddress), int> AuthenticationHistory  = new ConcurrentDictionary<(string, IPAddress), int>();
+
+        public static bool IsAuthorized(string handle, IPAddress address)
+        {
+            if (!AuthenticationHistory.TryGetValue((handle, address), out _)) return false;
+                AuthenticationHistory.TryRemove((handle, address), out _);
+            return true;
+        }
+
+        public static void Initialize()
+        {
+            var tmr = new System.Timers.Timer(1000) {AutoReset = true};
+            tmr.Elapsed += UpdateAuthorizations;
+            tmr.Start();
+        }
+
+        private static void UpdateAuthorizations(object sender, ElapsedEventArgs e)
+        {
+            foreach (var kvp in AuthenticationHistory)
+            {
+                if (kvp.Value > Cfg.ApiAuthTimeoutSeconds) AuthenticationHistory.TryRemove(kvp);
+                else AuthenticationHistory[kvp.Key]++;
+            }
+        }
         public static async ValueTask ProcessClient(HttpClientHolder holder, HttpInitialRequest request)
         {
             var handler = HttpHandleStore.Check(request.Path);
@@ -36,20 +64,43 @@ namespace ImpostorHqR.Core.Web.Http.Server.Client
                 request.Path = Path.Combine(Directory.GetCurrentDirectory(), HttpConstant.RootDirectory, request.Path);
                 if (!File.Exists(request.Path))
                 {
-                    await holder.SafeWriteAsync(HttpErrorResponses.Instance.NotFoundResponse);
+                    await holder.SafeWriteAsync(HttpErrorResponses.NotFoundResponse);
                     return;
                 }
             }
             else
             {
-                handler.Invoked?.Invoke(holder);
-                return;
+                if (handler.Options == null)
+                {
+                    goto Server;
+                }
+                if (!request.Credentials.HasValue ||
+                    !request.Credentials.Value.Password.Equals(handler.Options.Value.Password) ||
+                    !request.Credentials.Value.User.Equals(handler.Options.Value.User))
+                {
+                    await holder.SafeWriteAsync(HttpErrorResponses.NotAuthorizedResponse);
+                    return;
+                }
+
+                Server:
+                {
+                    Authorize();
+                    handler.Invoked?.Invoke(holder);
+                    return;
+                }
+
+                void Authorize()
+                {
+                    Trace.Assert(holder.Client.RemoteEndPoint != null, "Scary: IPEndPoint was null.");
+                    var ipa = ((IPEndPoint) holder.Client.RemoteEndPoint).Address.MapToIPv6();
+                    AuthenticationHistory.AddOrUpdate((handler.Path,ipa), 0, (_,__) => 0);
+                }
             }
 
             var mime = MimeProcessor.Interpret(request.Path);
             if (mime == null)
             {
-                await holder.SafeWriteAsync(HttpErrorResponses.Instance.NotImplementedResponse);
+                await holder.SafeWriteAsync(HttpErrorResponses.NotImplementedResponse);
                 return;
             }
 
@@ -211,6 +262,7 @@ namespace ImpostorHqR.Core.Web.Http.Server.Client
 
         public static int TransferRateKBytes = 0;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static async ValueTask CopyStream(FileInfo fileInfo, Stream fs, HttpClientHolder holder, long toSendTotal, bool async)
         {
             if (!await ResourcePool.WaitAsync(Cfg.ResourcePoolTimeout)) return;

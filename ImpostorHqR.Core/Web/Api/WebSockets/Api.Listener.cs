@@ -14,6 +14,7 @@ namespace ImpostorHqR.Core.Web.Api.WebSockets
 
         public static void Start()
         {
+            HqApiProcessor.Initialize();
             Running = true;
             var location = $"ws://0.0.0.0:{IConfigurationStore.GetByType<RequiemConfig>().ApiPort}";
             Listener = new WebSocketServer(location);

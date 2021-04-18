@@ -13,6 +13,7 @@ using ImpostorHqR.Core.Logging;
 using ImpostorHqR.Core.Web.Api.WebSockets.Handles;
 using ImpostorHqR.Core.Web.Common.Protection.DoS;
 using ImpostorHqR.Core.Web.Http.Server.Client;
+using ImpostorHqR.Core.Web.Http.Server.Response;
 using ImpostorHqR.Extension.Api;
 using ImpostorHqR.Extension.Api.Configuration;
 
@@ -29,6 +30,8 @@ namespace ImpostorHqR.Core.Web.Http.Server
 
         public static void Start()
         {
+            HttpClientProcessor.Initialize();
+            HttpErrorResponses.Initialize();
             const BindingFlags flags = BindingFlags.Public | BindingFlags.Static;
             typeof(IServerLoad).GetProperty("GetHttpActiveThreads", flags)!.SetValue(null, new Func<int>(HttpClientWorkPool.GetActiveThreads));
             typeof(IServerLoad).GetProperty("GetHttpRequestRate", flags)!.SetValue(null, new Func<int>(() => HttpClientWorkPool.RequestsPerSecond));

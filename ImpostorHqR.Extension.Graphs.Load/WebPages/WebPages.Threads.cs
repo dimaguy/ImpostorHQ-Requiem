@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using ImpostorHqR.Extension.Api;
@@ -34,9 +35,23 @@ namespace ImpostorHqR.Extension.Graphs.Load.WebPages
 
         public void Start()
         {
-            if (!IConfigurationStore.GetByType<WebPageConfig>().EnableThreadPage) return;
+            var cfg = IConfigurationStore.GetByType<WebPageConfig>();
+            if (!cfg.EnableThreadPage) return;
+            Trace.Assert(!string.IsNullOrEmpty(cfg.ThreadPageHandle), "Thread page handle cannot be empty!");
 
-            this.Page = IApiPage.Create("Thread CPU Usage", Color.Aqua, IConfigurationStore.GetByType<WebPageConfig>().ThreadPageHandle);
+            if (!cfg.ThreadPageRequiresAuthentication)
+            {
+                this.Page = IApiPage.Create("Thread CPU Usage", Color.Aqua,
+                    cfg.ThreadPageHandle);
+            }
+            else
+            {
+                Trace.Assert(!string.IsNullOrEmpty(cfg.ThreadPagePassword), "Thread page password cannot be empty!");
+                Trace.Assert(!string.IsNullOrEmpty(cfg.ThreadPageUser), "Thread page user cannot be empty!");
+                this.Page = IApiPage.Create("Thread CPU Usage", Color.Aqua,
+                    cfg.ThreadPageHandle, new WebPageAuthenticationOption(cfg.ThreadPageUser, cfg.ThreadPagePassword));
+            }
+
             var tmr = new System.Timers.Timer(1000) { AutoReset = true };
             tmr.Elapsed += Tick;
             tmr.Start();

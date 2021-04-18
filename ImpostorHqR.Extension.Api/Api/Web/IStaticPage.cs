@@ -8,11 +8,18 @@ namespace ImpostorHqR.Extension.Api.Api.Web
     {
         #region Provider
 
-        private static Converter<(Color webColor, string title), IStaticPage> _Provider;
+        private static Converter<(Color webColor, string title, string handle), IStaticPage> _Provider;
+        private static Converter<(Color webColor, string title, string handle, WebPageAuthenticationOption credentials), IStaticPage> _SecureProvider;
 
-        public static IStaticPage Create(Color webColor, string title)
+
+        public static IStaticPage Create(Color webColor, string title, string handle)
         {
-            return _Provider.Invoke((webColor, title));
+            return _Provider.Invoke((webColor, title, handle));
+        }
+
+        public static IStaticPage Create(Color webColor, string title, string handle, WebPageAuthenticationOption credentials)
+        {
+            return _SecureProvider.Invoke((webColor, title, handle, credentials));
         }
 
         #endregion
