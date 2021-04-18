@@ -5,29 +5,28 @@ using System.Drawing;
 using System.Linq;
 using System.Threading;
 using System.Timers;
-using ImpostorHqR.Extension.Api.Interface;
-using ImpostorHqR.Extension.Api.Interface.Web.Page.Api.Simple;
+using ImpostorHqR.Extension.Api;
+using ImpostorHqR.Extension.Api.Api.Web;
+using ImpostorHqR.Extension.Api.Configuration;
 using Timer = System.Timers.Timer;
 
 namespace ImpostorHqR.Extension.Graphs.Load.WebPages
 {
-    public class WebPageExtension : IExtensionService
+    public class WebPageExceptions 
     {
-        private ISimpleApiPage Page { get; set; }
+        private IApiPage Page { get; set; }
 
         private volatile int ExceptionsLastSecond = 0;
 
-        private ConcurrentDictionary<string, int> Exceptions = new ConcurrentDictionary<string, int>();
+        private readonly ConcurrentDictionary<string, int> Exceptions = new ConcurrentDictionary<string, int>();
 
-        public void Init()
+        public void Start()
         {
-            if (!WebPageConfig.Instance.EnableExceptionsPage) return;
-
+            if (!IConfigurationStore.GetByType<WebPageConfig>().EnableExceptionsPage) return;
             AppDomain.CurrentDomain.FirstChanceException += OnException;
-            this.Page = Proxy.Instance.PreInitialization.PageProvider.SimpleApiPageProvider.ProduceApiPage(
-                "Exception Statistics", Color.White, WebPageConfig.Instance.ExceptionsPageHandle);
-            var tmr = new Timer(1000);
-            tmr.AutoReset = true;
+            this.Page = IApiPage.Create(
+                "Exceptions / second", Color.Red, IConfigurationStore.GetByType<WebPageConfig>().ExceptionsPageHandle);
+            var tmr = new Timer(1000) {AutoReset = true};
             tmr.Elapsed += Tick;
             tmr.Start();
         }
@@ -49,11 +48,9 @@ namespace ImpostorHqR.Extension.Graphs.Load.WebPages
 
         private void Tick(object sender, ElapsedEventArgs e)
         {
-            KeyValuePair<string, int>[] exceptions;
-            exceptions = Exceptions.OrderByDescending(x => x.Value).ToArray();
+            var exceptions = Exceptions.OrderByDescending(x => x.Value).ToArray();
             Exceptions.Clear();
-            var rsb = Proxy.Instance.PreInitialization.StringBuilderPool.Get();
-            var sb = rsb.StringBuilder;
+            using var sb = IReusableStringBuilder.Get();
             sb.Append("It is ");
             sb.Append(DateTime.Now.ToString());
             if (exceptions.Length != 0)
@@ -64,21 +61,12 @@ namespace ImpostorHqR.Extension.Graphs.Load.WebPages
                     sb.Append("Name: \"");
                     sb.Append(key);
                     sb.Append("\", thrown last second: ");
-                    sb.Append(value);
+                    sb.Append(value.ToString());
                     sb.Append("<br>");
                 }
             }
 
-            Page.Set(sb.ToString(), Color.Black);
-            Proxy.Instance.PreInitialization.StringBuilderPool.Return(rsb);
-        }
-
-        public void PostInit()
-        {
-        }
-
-        public void Shutdown()
-        {
+            Page.Set(sb.ToString(), Color.Transparent);
         }
     }
 }

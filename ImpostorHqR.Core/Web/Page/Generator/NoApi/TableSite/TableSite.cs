@@ -2,12 +2,12 @@
 using System.Drawing;
 using System.Linq;
 using ImpostorHqR.Core.Logging;
-using ImpostorHqR.Core.ObjectPool.Pools.StringBuilder;
-using ImpostorHqR.Extension.Api.Interface.Web.Page.NoApi;
+using ImpostorHqR.Extension.Api;
+using ImpostorHqR.Extension.Api.Api.Web;
 
 namespace ImpostorHqR.Core.Web.Page.Generator.NoApi.TableSite
 {
-    public class TableSite : ISimplePage
+    public class TableSite : IStaticPage
     {
         public string StartHtmlOriginal { get; private set; }
 
@@ -68,7 +68,7 @@ namespace ImpostorHqR.Core.Web.Page.Generator.NoApi.TableSite
             lock (this._sync)
             {
                 if (!this.Update) return this.Content;
-                using var sb = StringBuilderPool.Instance.Get();
+                using var sb = IReusableStringBuilder.Get();
                 sb.Append(this.StartHtml);
 
                 foreach (var simpleElement in _elements)
@@ -95,7 +95,6 @@ namespace ImpostorHqR.Core.Web.Page.Generator.NoApi.TableSite
         {
             if (string.IsNullOrEmpty(title))
             {
-                ConsoleLogging.Instance.LogError("Extension tried to change webpage name to an empty string.", this);
                 return;
             }
 

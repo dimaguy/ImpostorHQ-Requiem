@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ImpostorHqR.Core.Configuration;
@@ -12,23 +13,27 @@ using ImpostorHqR.Core.Web.Http.Server.Request.Fields;
 using ImpostorHqR.Core.Web.Http.Server.Response;
 using ImpostorHqR.Core.Web.Http.Server.Response.Fields;
 using ImpostorHqR.Core.Web.Http.Server.Response.Mime;
+using ImpostorHqR.Extension.Api;
+using ImpostorHqR.Extension.Api.Configuration;
 
 namespace ImpostorHqR.Core.Web.Http.Server.Client
 {
     public static class HttpClientProcessor
     {
-        private static readonly SemaphoreSlim ResourcePool = new SemaphoreSlim(ConfigHolder.Instance.ResourcePoolSize, ConfigHolder.Instance.ResourcePoolSize);
+        private static RequiemConfig Cfg => IConfigurationStore.GetByType<RequiemConfig>();
 
-        private static ArrayPool<byte> Pool = ArrayPool<byte>.Shared;
+        private static readonly SemaphoreSlim ResourcePool = new SemaphoreSlim(Cfg.ResourcePoolSize, Cfg.ResourcePoolSize);
 
-        public static int ConcurrentFileTransfers => (ConfigHolder.Instance.ResourcePoolSize - ResourcePool.CurrentCount);
+        private static readonly ArrayPool<byte> Pool = ArrayPool<byte>.Shared;
 
-        public static async Task ProcessClient(HttpClientHolder holder, HttpInitialRequest request)
+        public static int ConcurrentFileTransfers => (Cfg.ResourcePoolSize - ResourcePool.CurrentCount);
+
+        public static async ValueTask ProcessClient(HttpClientHolder holder, HttpInitialRequest request)
         {
-            var handler = HttpHandleStore.Instance.Check(request.Path);
+            var handler = HttpHandleStore.Check(request.Path);
             if (handler == null)
             {
-                request.Path = Path.Combine(Directory.GetCurrentDirectory(), HttpConstant.RootDirectory, request.Path.Replace("/", "\\"));
+                request.Path = Path.Combine(Directory.GetCurrentDirectory(), HttpConstant.RootDirectory, request.Path);
                 if (!File.Exists(request.Path))
                 {
                     await holder.SafeWriteAsync(HttpErrorResponses.Instance.NotFoundResponse);
@@ -47,72 +52,107 @@ namespace ImpostorHqR.Core.Web.Http.Server.Client
                 await holder.SafeWriteAsync(HttpErrorResponses.Instance.NotImplementedResponse);
                 return;
             }
-            if (request.Method == HttpInitialRequestMethod.HEAD || !holder.Connected) return;
 
             var fileInfo = new FileInfo(request.Path);
             holder.Client.SendBufferSize = HttpConstant.FileBufferSize;
-            await using var fs = new FileStream(request.Path, FileMode.Open,FileAccess.Read, FileShare.Read, 4096, useAsync: fileInfo.Length > 1024 * 1024 ? true : false);
+            var asyncFs = fileInfo.Length > 1024 * 1024;
+            Stream fs;
 
-            if (request.Ranges == null || request.Ranges.Count == 0)
+            if (Cfg.EnableHttpCache && !Cfg.HttpCacheExclude.Contains(request.Path))
             {
-                var header = new HttpResponseHeaders((int)fileInfo.Length, ResponseStatusCode.Ok200, new IResponseField[]
+                var (stat, array, length) = HttpServerFileCache.TryGet(request.Path);
+                if (stat)
                 {
-                    new FieldServer(HttpConstant.ServerName),
-                    new FieldContentType(mime),
-                    new FieldAcceptRanges(HttpConstant.AcceptRanges),
-                }, request.HttpVersion);
-
-                var headerData = header.Compile();
-                await holder.SafeWriteAsync(headerData);
-                if (!holder.Connected) return;
-                await SendSubRoutine(fileInfo, fs, holder, fileInfo.Length);
-
-                return;
+                    Trace.Assert(array != null, "Http cache null L58/Client.Processor!");
+                    fs = new MemoryStream(array, 0, length.Value);
+                    asyncFs = false;
+                }
+                else
+                {
+                    var (success, bytes, stream) = await HttpServerFileCache.TryCache(request.Path, asyncFs);
+                    if (success)
+                    {
+                        fs = new MemoryStream(bytes, 0, (int) fileInfo.Length);
+                        asyncFs = false;
+                    }
+                    else
+                    {
+                        fs = stream;
+                    }
+                }
+            }
+            else
+            { 
+                fs = new FileStream(request.Path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096,
+                    useAsync: asyncFs);
             }
 
-            foreach (var range in request.Ranges)
+            await using (fs)
             {
-                switch (range.Method)
+                if (request.Ranges == null || request.Ranges.Count == 0)
                 {
-                    case HttpRangeRequestMethod.SliceFromToEnd:
+                    using var header = new HttpResponseHeaders(fileInfo.Length, ResponseStatusCode.Ok200,
+                        new IResponseField[]
+                        {
+                            new FieldServer(HttpConstant.ServerName),
+                            new FieldContentType(mime),
+                            new FieldAcceptRanges(HttpConstant.AcceptRanges),
+                        }, request.HttpVersion);
+
+                    var headerData = header.Compile();
+
+                    if (!await holder.SafeWriteAsync(headerData.Item1, headerData.Item2)) return;
+                    if (request.Method == HttpInitialRequestMethod.HEAD) return;
+
+                    await CopyStream(fileInfo, fs, holder, fileInfo.Length, asyncFs);
+                    return;
+                }
+
+                foreach (var range in request.Ranges)
+                {
+                    switch (range.Method)
+                    {
+                        case HttpRangeRequestMethod.SliceFromToEnd:
                         {
                             // implemented, tested
                             if (fs.Length < range.Range.From) return;
 
-                            var header = new HttpResponseHeaders((int)fileInfo.Length, ResponseStatusCode.PartialContent206, new IResponseField[]
-                            {
-                                new FieldContentRange(true, range.Range.From, fileInfo.Length-1, fileInfo.Length),
-                                new FieldServer(HttpConstant.ServerName),
-                                new FieldContentType(mime),
-                                new FieldAcceptRanges(HttpConstant.AcceptRanges),
-                            }, request.HttpVersion);
+                            using var header = new HttpResponseHeaders(fileInfo.Length,
+                                ResponseStatusCode.PartialContent206, new IResponseField[]
+                                {
+                                    new FieldContentRange(true, range.Range.From, fileInfo.Length - 1, fileInfo.Length),
+                                    new FieldServer(HttpConstant.ServerName),
+                                    new FieldContentType(mime),
+                                    new FieldAcceptRanges(HttpConstant.AcceptRanges),
+                                }, request.HttpVersion);
 
                             var headerData = header.Compile();
-                            await holder.SafeWriteAsync(headerData);
-                            if (!holder.Connected) return;
-                            fs.Seek((long)range.Range.From, SeekOrigin.Begin);
-                            await SendSubRoutine(fileInfo, fs, holder, (int)(fs.Length - range.Range.From));
+                            if (!await holder.SafeWriteAsync(headerData.Item1, headerData.Item2)) return;
+                            if(request.Method == HttpInitialRequestMethod.HEAD) return;
+                            fs.Seek((long) range.Range.From!, SeekOrigin.Begin);
+                            await CopyStream(fileInfo, fs, holder, (int) (fs.Length - range.Range.From), asyncFs);
                             return;
                         }
 
-                    case HttpRangeRequestMethod.SendAll:
+                        case HttpRangeRequestMethod.SendAll:
                         {
                             // implemented, tested
-                            var header = new HttpResponseHeaders((int)fileInfo.Length, ResponseStatusCode.PartialContent206, new IResponseField[]
-                            {
-                                new FieldContentRange(true,0,fileInfo.Length-1, fileInfo.Length),
-                                new FieldServer(HttpConstant.ServerName),
-                                new FieldContentType(mime),
-                                new FieldAcceptRanges(HttpConstant.AcceptRanges),
-                            }, request.HttpVersion);
+                            using var header = new HttpResponseHeaders(fileInfo.Length,
+                                ResponseStatusCode.PartialContent206, new IResponseField[]
+                                {
+                                    new FieldContentRange(true, 0, fileInfo.Length - 1, fileInfo.Length),
+                                    new FieldServer(HttpConstant.ServerName),
+                                    new FieldContentType(mime),
+                                    new FieldAcceptRanges(HttpConstant.AcceptRanges),
+                                }, request.HttpVersion);
 
                             var headerData = header.Compile();
-                            await holder.SafeWriteAsync(headerData);
-                            if (!holder.Connected) return;
-                            await SendSubRoutine(fileInfo, fs, holder, (int)fs.Length);
+                            if (!await holder.SafeWriteAsync(headerData.Item1, headerData.Item2)) return;
+                            if (request.Method == HttpInitialRequestMethod.HEAD) return;
+                            await CopyStream(fileInfo, fs, holder, (int) fs.Length, asyncFs);
                             return;
                         }
-                    case HttpRangeRequestMethod.SliceFromTo:
+                        case HttpRangeRequestMethod.SliceFromTo:
                         {
                             if (fs.Length < range.Range.From || fs.Length < range.Range.To)
                             {
@@ -120,59 +160,61 @@ namespace ImpostorHqR.Core.Web.Http.Server.Client
                                 return;
                             }
 
-                            var header = new HttpResponseHeaders((int)fileInfo.Length, ResponseStatusCode.PartialContent206, new IResponseField[]
-                            {
-                                new FieldContentRange(true,range.Range.From,range.Range.To,fileInfo.Length),
-                                new FieldServer(HttpConstant.ServerName),
-                                new FieldContentType(mime),
-                                new FieldAcceptRanges(HttpConstant.AcceptRanges),
-                            }, request.HttpVersion);
+                            using var header = new HttpResponseHeaders(fileInfo.Length,
+                                ResponseStatusCode.PartialContent206, new IResponseField[]
+                                {
+                                    new FieldContentRange(true, range.Range.From, range.Range.To, fileInfo.Length),
+                                    new FieldServer(HttpConstant.ServerName),
+                                    new FieldContentType(mime),
+                                    new FieldAcceptRanges(HttpConstant.AcceptRanges),
+                                }, request.HttpVersion);
 
                             var headerData = header.Compile();
-                            await holder.SafeWriteAsync(headerData);
-                            if (!holder.Connected) return;
-                            Debug.Assert(range.Range.From != null, "range.Range.From != null");
-                            fs.Seek((int)range.Range.From, SeekOrigin.Begin);
 
-                            await SendSubRoutine(fileInfo, fs, holder, (long)(range.Range.To - range.Range.From));
-
+                            if (!await holder.SafeWriteAsync(headerData.Item1, headerData.Item2)) return;
+                            if (request.Method == HttpInitialRequestMethod.HEAD) return;
+                            fs.Seek((int) range.Range.From, SeekOrigin.Begin);
+                            await CopyStream(fileInfo, fs, holder, (long) (range.Range.To - range.Range.From)!,
+                                asyncFs);
                             return;
                         }
-                    case HttpRangeRequestMethod.SliceFromStartTo:
+                        case HttpRangeRequestMethod.SliceFromStartTo:
                         {
-
                             if (fs.Length < range.Range.To)
                             {
                                 // attacker.
                                 return;
                             }
 
-                            var header = new HttpResponseHeaders((int)fileInfo.Length, ResponseStatusCode.PartialContent206, new IResponseField[]
-                            {
-                                new FieldContentRange(true,0,range.Range.To, fileInfo.Length),
-                                new FieldServer(HttpConstant.ServerName),
-                                new FieldContentType(mime),
-                                new FieldAcceptRanges(HttpConstant.AcceptRanges),
-                            }, request.HttpVersion);
+                            using var header = new HttpResponseHeaders(fileInfo.Length,
+                                ResponseStatusCode.PartialContent206, new IResponseField[]
+                                {
+                                    new FieldContentRange(true, 0, range.Range.To, fileInfo.Length),
+                                    new FieldServer(HttpConstant.ServerName),
+                                    new FieldContentType(mime),
+                                    new FieldAcceptRanges(HttpConstant.AcceptRanges),
+                                }, request.HttpVersion);
 
                             var headerData = header.Compile();
-                            await holder.SafeWriteAsync(headerData);
-                            if (!holder.Connected) return;
-                            if (range.Range.To != null) await SendSubRoutine(fileInfo, fs, holder, (long)range.Range.To);
+                            if (!await holder.SafeWriteAsync(headerData.Item1, headerData.Item2) ||
+                                range.Range.To == null) return;
+                            if (request.Method == HttpInitialRequestMethod.HEAD) return;
+                            await CopyStream(fileInfo, fs, holder, (long) range.Range.To, asyncFs);
                             return;
                         }
-                    default:
-                        return; // ??
+                        default:
+                            return; // ??
+                    }
                 }
             }
         }
 
         public static int TransferRateKBytes = 0;
 
-        private static async Task SendSubRoutine(FileInfo fileInfo, Stream fs, HttpClientHolder holder, long toSendTotal)
+        private static async ValueTask CopyStream(FileInfo fileInfo, Stream fs, HttpClientHolder holder, long toSendTotal, bool async)
         {
-            if (!await ResourcePool.WaitAsync(ConfigHolder.Instance.ResourcePoolTimeout)) return;
-            var bufferSize = (int) Math.Min(fileInfo.Length, ConfigHolder.Instance.FileIoSize);
+            if (!await ResourcePool.WaitAsync(Cfg.ResourcePoolTimeout)) return;
+            var bufferSize = (int) Math.Min(fileInfo.Length, Cfg.FileIoSize);
             var buffer = Pool.Rent(bufferSize);
             long totalRead = 0;
             try
@@ -180,19 +222,18 @@ namespace ImpostorHqR.Core.Web.Http.Server.Client
                 while (totalRead != toSendTotal)
                 {
                     var toRead = (int) Math.Min(fileInfo.Length - totalRead, bufferSize);
-                    var read = await fs.ReadAsync(buffer.AsMemory(0, toRead));
+                    var mem = buffer.AsMemory(0, toRead);
+                    var read = async ? await fs.ReadAsync(mem) : fs.Read(mem.Span);
                     totalRead += read;
 
-                    var result = await holder.SafeWriteAsync(buffer, read);
-
-                    if(!result) return;
+                    if(!await holder.SafeWriteAsync(buffer, read)) return;
 
                     Interlocked.Add(ref TransferRateKBytes, read / 1024);
                 }
             }
             catch (Exception ex)
             {
-                ConsoleLogging.Instance.LogError($"Unhandled exception in send subroutine : {ex}", null, true);
+                ILogManager.Log("Unhandled exception in Client.Processor send.","Client.Processor.CopyStream",LogType.Error,ex:ex);
             }
             finally
             {

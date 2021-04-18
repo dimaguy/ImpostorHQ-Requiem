@@ -1,4 +1,4 @@
-﻿using ImpostorHqR.Core.ObjectPool.Pools.StringBuilder;
+﻿using ImpostorHqR.Extension.Api;
 
 namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiGraphPage.Splicer
 {
@@ -13,7 +13,7 @@ namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiGraphPage.Splicer
         /// <returns></returns>
         public static string SpliceMainScript(ushort port, string apiHandle, string[] variableNames, string[] plots, string[] ctxDeclarationsNames)
         {
-            var sb = StringBuilderPool.Pool.Get();
+            using var sb = IReusableStringBuilder.Get();
 
             foreach (var variable in variableNames) sb.AppendLine($"var {variable} = null;");
 
@@ -44,7 +44,6 @@ namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiGraphPage.Splicer
             }
 
             var receiverStr = sb.ToString();
-            StringBuilderPool.Pool.Return(sb);
 
             return GraphPageSplicerConstant.MainScriptCode
                 .Replace(GraphPageSplicerConstant.ReplaceInValue, variables)

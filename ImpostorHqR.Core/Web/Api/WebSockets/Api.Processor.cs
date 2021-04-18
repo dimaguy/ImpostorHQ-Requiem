@@ -5,18 +5,15 @@ using ImpostorHqR.Core.Logging;
 using ImpostorHqR.Core.Web.Api.WebSockets.Auth;
 using ImpostorHqR.Core.Web.Api.WebSockets.Auth.Responses;
 using ImpostorHqR.Core.Web.Api.WebSockets.Handles;
-using ImpostorHqR.Extension.Api.Interface.Logging;
-using ImpostorHqR.Extensions.Api.Interface.Logging;
+using ImpostorHqR.Extension.Api;
 
 namespace ImpostorHqR.Core.Web.Api.WebSockets
 {
-    public class HqApiProcessor
+    public static class HqApiProcessor
     {
-        public static readonly HqApiProcessor Instance = new HqApiProcessor();
+        private static readonly List<HqApiPreClient> _timeoutQueue = new List<HqApiPreClient>();
 
-        private readonly List<HqApiPreClient> _timeoutQueue = new List<HqApiPreClient>();
-
-        public HqApiProcessor()
+        static HqApiProcessor()
         {
             var tmr = new System.Timers.Timer(1000)
             {
@@ -27,7 +24,7 @@ namespace ImpostorHqR.Core.Web.Api.WebSockets
             tmr.Start();
         }
 
-        private void RemoveCallback(object sender, System.Timers.ElapsedEventArgs e)
+        private static void RemoveCallback(object sender, System.Timers.ElapsedEventArgs e)
         {
             lock (_timeoutQueue)
             {
@@ -36,30 +33,21 @@ namespace ImpostorHqR.Core.Web.Api.WebSockets
                     for (var i = 0; i < _timeoutQueue.Count; i++)
                     {
                         var client = _timeoutQueue[i];
-                        if (client.Cycles < HqApiProcessorConstant.AuthTimeoutSeconds)
-                        {
-                            client.Cycles++;
-                        }
+                        if (client.Cycles < HqApiProcessorConstant.AuthTimeoutSeconds) client.Cycles++;
                         else
                         {
                             client.TimedOut = true;
                             client.Connection.Close();
                             _timeoutQueue.RemoveAt(i);
 
-                            LogManager.Instance.Log(new LogEntry()
-                            {
-                                Message = $"Client {client.Connection.ConnectionInfo.ClientIpAddress} timed out on authentication.",
-                                Source = this,
-                                Type = LogType.Information
-                            });
-
+                            ILogManager.Log($"Client {client.Connection.ConnectionInfo.ClientIpAddress} timed out on authentication.", "Api.Processor", LogType.Warning);
                         }
                     }
                 }
             }
         }
 
-        public void Process(IWebSocketConnection client)
+        public static void Process(IWebSocketConnection client)
         {
             var record = new HqApiPreClient()
             {
@@ -72,7 +60,7 @@ namespace ImpostorHqR.Core.Web.Api.WebSockets
             client.OnMessage += (message) => OnMessage(message, record);
         }
 
-        private void OnMessage(string message, HqApiPreClient client)
+        private static void OnMessage(string message, HqApiPreClient client)
         {
             if (client.Stage != AuthStage.Authenticated)
             {
@@ -90,7 +78,7 @@ namespace ImpostorHqR.Core.Web.Api.WebSockets
             }
         }
 
-        private void HandleAuthentication(string message, HqApiPreClient client)
+        private static void HandleAuthentication(string message, HqApiPreClient client)
         {
             if (client.Stage != AuthStage.NegotiateHandle) return;
             var request = HqAuthBaseMessage.Deserialize(message);
@@ -102,7 +90,6 @@ namespace ImpostorHqR.Core.Web.Api.WebSockets
 
             if (request.Stage != AuthStage.NegotiateHandle)
             {
-                ConsoleLogging.Instance.LogInformation($"API intrusion attempt [tried: stage {request.Stage}, actual: {AuthStage.NegotiateHandle}] from {client.Connection.ConnectionInfo.ClientIpAddress}.", true);
                 // intruder.
                 Remove(client, true);
                 return;
@@ -114,17 +101,11 @@ namespace ImpostorHqR.Core.Web.Api.WebSockets
                 Remove(client, true);
                 return;
             }
-            var handle = WebApiHandleStore.Instance.Handles.FirstOrDefault(item =>
+            var handle = WebApiHandleStore.Handles.FirstOrDefault(item =>
                 item.HandleId.Equals(data.Handle) && item.Secure == data.Secure);
 
             if (handle == null)
             {
-                LogManager.Instance.Log(new LogEntry()
-                {
-                    Message = $"Client searched for non-existent handle \"{client.Handle.HandleId}\": {client.Connection.ConnectionInfo.ClientIpAddress}",
-                    Source = this,
-                    Type = LogType.Information
-                });
                 client.Push(new HandleNotFoundResponse());
                 Remove(client, true);
                 return;
@@ -137,12 +118,6 @@ namespace ImpostorHqR.Core.Web.Api.WebSockets
             }
             else
             {
-                LogManager.Instance.Log(new LogEntry()
-                {
-                    Message = $"New API client for {handle.HandleId}: {client.Connection.ConnectionInfo.ClientIpAddress}",
-                    Source = this,
-                    Type = LogType.Information
-                });
                 Remove(client, false);
                 client.Push(new WelcomeResponse());
                 client.Handle = handle;
@@ -151,14 +126,14 @@ namespace ImpostorHqR.Core.Web.Api.WebSockets
                 client.User = user;
                 client.Stage = AuthStage.Authenticated;
             }
-        }
 
-        private void Remove(HqApiPreClient client, bool fail)
-        {
-            lock (_timeoutQueue)
+            static void Remove(HqApiPreClient client, bool fail)
             {
-                if (_timeoutQueue.Contains(client)) _timeoutQueue.Remove(client);
-                if (fail) client.Connection.Close();
+                lock (_timeoutQueue)
+                {
+                    if (_timeoutQueue.Contains(client)) _timeoutQueue.Remove(client);
+                    if (fail) client.Connection.Close();
+                }
             }
         }
     }

@@ -3,6 +3,8 @@ using System.IO;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
+using System.Runtime.ConstrainedExecution;
 using System.Security.Authentication;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,113 +12,97 @@ using ImpostorHqR.Core.Configuration;
 using ImpostorHqR.Core.Logging;
 using ImpostorHqR.Core.Web.Http.Server.IO;
 using ImpostorHqR.Core.Web.Http.Server.Request;
-using ImpostorHqR.Extension.Api.Interface.Helpers;
-using ImpostorHqR.Extension.Api.Interface.Logging;
-using ImpostorHqR.Extensions.Api.Interface.Logging;
+using ImpostorHqR.Extension.Api;
+using ImpostorHqR.Extension.Api.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ImpostorHqR.Core.Web.Http.Server.Client
 {
-    public class HttpClientWorkPool : IHttpServerMonitor
+    public static class HttpClientWorkPool
     {
-        public static readonly HttpClientWorkPool Instance = new HttpClientWorkPool();
+        private static int _busyThreads = 0;
 
-        private int _busyThreads = 0;
+        private static int _usersCount = 0;
 
-        private int _usersCount = 0;
+        private static int _rate = 0;
 
-        private int _rate = 0;
+        public static int RequestsPerSecond { get; private set; }
 
-        private readonly TaskFactory _taskFactory = new TaskFactory(CancellationToken.None, TaskCreationOptions.LongRunning, TaskContinuationOptions.None, TaskScheduler.Current);
+        public static int FileDataRateKbPerSecond => _rate;
 
-        public int RequestsPerSecond { get; private set; }
-
-        public int FileDataRateKbPerSecond
-        {
-            get { lock (_incrementSyncLock) return _rate; }
-        }
-
-        public int GetConcurrentDownloads()
+        public static int GetConcurrentDownloads()
         {
             return HttpClientProcessor.ConcurrentFileTransfers;
         }
 
-        private readonly object _incrementSyncLock = new object();
+        public static int GetCacheSize() => HttpServerFileCache.CurrentSize;
 
-        public HttpClientWorkPool()
+        private static bool Ssl { get; }
+
+        static HttpClientWorkPool()
         {
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-            ThreadPool.SetMaxThreads(ConfigHolder.Instance.ResourcePoolSize, 1000);
+            Ssl = IConfigurationStore.GetByType<RequiemConfig>().EnableSsl;
             var tmr = new System.Timers.Timer(1000) { AutoReset = true };
             tmr.Elapsed += Tick;
             tmr.Start();
         }
 
-        public int GetActiveThreads()
+        public static int GetActiveThreads() => _busyThreads;
+
+        private static void Tick(object sender, System.Timers.ElapsedEventArgs e)
         {
-            lock (_incrementSyncLock) return _busyThreads;
+            RequestsPerSecond = _usersCount;
+            _usersCount = 0;
+            _rate = (int) (HttpClientProcessor.TransferRateKBytes);
+            HttpClientProcessor.TransferRateKBytes = 0;
         }
 
-        private void Tick(object sender, System.Timers.ElapsedEventArgs e)
-        {
-            lock (_incrementSyncLock)
-            {
-                this.RequestsPerSecond = _usersCount;
-                _usersCount = 0;
-                this._rate = (int)(HttpClientProcessor.TransferRateKBytes);
-                HttpClientProcessor.TransferRateKBytes = 0;
-            }
-        }
-
-        public void PostWorkItem(Socket client)
+        public static async ValueTask ProcessWorkItemAsync(Socket tcpClient)
         {
             Interlocked.Increment(ref _usersCount);
-            Task.Factory.StartNew(async () =>
+            Interlocked.Increment(ref _busyThreads);
+            var finalized = false;
+            try
             {
-                Interlocked.Increment(ref _busyThreads);
-                await Process(client);
-                Interlocked.Decrement(ref _busyThreads);
-            });
-        }
+                var stream = Ssl
+                    ? await AuthenticateSsl(tcpClient)
+                    : new NetworkStream(tcpClient);
 
-        private async Task Process(Socket tcpClient)
-        {
-            using (tcpClient)
+                var requestData = await HttpLineReader.ReadLineSizedBuffered(stream, 2048);
+                if (requestData == null || requestData.Length < 10) return;
+
+                var request = HttpRequestParser.ParseRequest(requestData);
+                if (request == null) return;
+
+                using var holder = new HttpClientHolder(stream, tcpClient, (HttpInitialRequest) request);
+                finalized = true;
+                await HttpClientProcessor.ProcessClient(holder, (HttpInitialRequest) request);
+            }
+            catch (Exception e)
             {
-                try
-                {
-                    var stream = await SelectProtocol(tcpClient);
-                    var requestData = await HttpLineReader.ReadLineSizedBuffered(stream, 2048);
-                    if (string.IsNullOrEmpty(requestData)) return;
-                    var request = HttpRequestParser.ParseRequest(requestData);
-                    if (request == null) return;
-                    var holder = new HttpClientHolder(stream, tcpClient, (HttpInitialRequest)request);
-                    await HttpClientProcessor.ProcessClient(holder, (HttpInitialRequest)request);
-                }
-                catch (Exception e)
-                {
-                    await LogManager.Instance.Log(new LogEntry()
-                    {
-                        Message = $"Http error: {e.ToString()}",
-                        Source = this,
-                        Type = LogType.Error
-                    });
-                }
+                ILogManager.Log("Http work pool error.", "Client.Work.Pool", LogType.Error, true, true, e);
+            }
+            finally
+            {
+                if(!finalized) HttpClientHolder.Close(tcpClient);
+                Interlocked.Decrement(ref _busyThreads);
             }
         }
 
-        private static async Task<Stream> SelectProtocol(Socket client)
+        private static async ValueTask<Stream> AuthenticateSsl(Socket client)
         {
             var ns = new NetworkStream(client, true);
-            if (!ConfigHolder.Instance.EnableSsl) return ns;
             try
             {
                 var stream = new SslStream(ns);
-                await stream.AuthenticateAsServerAsync(ServerMain.Instance.Ssl, false, SslProtocols.Tls12, true);
+                await stream.AuthenticateAsServerAsync(HttpServer.Ssl, false, SslProtocols.Tls12, true);
                 return stream;
             }
             catch
             {
                 //fall to insecure protocol if SSL fails to authenticate.
+                //not tested, not documented, ??
                 return ns;
             }
         }

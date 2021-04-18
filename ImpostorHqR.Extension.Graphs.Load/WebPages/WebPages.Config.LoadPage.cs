@@ -1,49 +1,27 @@
-﻿using ImpostorHqR.Extension.Api.Interface;
+﻿using ImpostorHqR.Extension.Api.Configuration;
 
 namespace ImpostorHqR.Extension.Graphs.Load.WebPages
 {
-    class LoadWebPageConfig : IConfigurationHolder
+    [Configuration(false, true)]
+    class LoadWebPageConfig
     {
-        public static LoadWebPageConfig Instance { get; set; }
-
         #region Properties
-
-        public bool EnableCpuGraph { get; set; }
-        public bool EnableMemoryGraph { get; set; }
-        public bool EnableTotalThreadPoolThreadsGraph { get; set; }
-        public bool EnableTotalApplicationThreadsGraph { get; set; }
-        public bool EnableThreadPoolCompletionPortsGraph { get; set; }
-        public bool EnableThreadPoolJobsCompletedPerSecondGraph { get; set; }
-        public bool EnableThreadPoolJobsQueuedGraph { get; set; }
-        public bool EnableTotalProcessHandlesGraph { get; set; }
-        public bool EnableHttpBusyThreadsGraph { get; set; }
-        public bool EnableHttpFileTransfersGraph { get; set; }
-        public bool EnableHttpRequestsPerSecondGraph { get; set; }
-        public bool EnableHttpFileTransferRateKbPsGraph { get; set; }
-        public bool EnableExceptionGraph { get; set; }
+                                                        // sorry, i didn't feel like adjusting indentation
+        public bool EnableCpuGraph { get; set; }                                            = true;
+        public bool EnableMemoryGraph { get; set; }                                         = true;
+        public bool EnableTotalThreadPoolThreadsGraph { get; set; }                         = true;
+        public bool EnableTotalApplicationThreadsGraph { get; set; }                        = true;
+        public bool EnableThreadPoolCompletionPortsGraph { get; set; }                      = true;
+        public bool EnableThreadPoolJobsCompletedPerSecondGraph { get; set; }               = true;
+        public bool EnableThreadPoolJobsQueuedGraph { get; set; }                           = true;
+        public bool EnableTotalProcessHandlesGraph { get; set; }                            = true;
+        public bool EnableHttpBusyThreadsGraph { get; set; }                                = true;
+        public bool EnableHttpFileTransfersGraph { get; set; }                              = true;
+        public bool EnableHttpRequestsPerSecondGraph { get; set; }                          = true;
+        public bool EnableHttpFileTransferRateKbPsGraph { get; set; }                       = true;
+        public bool EnableExceptionGraph { get; set; }                                      = true;
+        public bool EnableCacheGraph { get; set; } = true;
 
         #endregion
-
-        public LoadWebPageConfig()
-        {
-            Instance = this;
-        }
-
-        public void SetDefaults()
-        {
-            this.EnableCpuGraph = true;
-            this.EnableMemoryGraph = true;
-            this.EnableTotalThreadPoolThreadsGraph = true;
-            this.EnableTotalApplicationThreadsGraph = true;
-            this.EnableThreadPoolCompletionPortsGraph = true;
-            this.EnableThreadPoolJobsCompletedPerSecondGraph = true;
-            this.EnableThreadPoolJobsQueuedGraph = true;
-            this.EnableTotalProcessHandlesGraph = true;
-            this.EnableHttpBusyThreadsGraph = true;
-            this.EnableHttpFileTransfersGraph = true;
-            this.EnableHttpRequestsPerSecondGraph = true;
-            this.EnableHttpFileTransferRateKbPsGraph = true;
-            this.EnableExceptionGraph = true;
-        }
     }
 }

@@ -2,8 +2,8 @@
 using System;
 using System.Threading.Tasks;
 using ImpostorHqR.Core.Logging;
-using ImpostorHqR.Extension.Api.Interface.Logging;
-using ImpostorHqR.Extensions.Api.Interface.Logging;
+using ImpostorHqR.Extension.Api;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ImpostorHqR.Core.Web.Api.WebSockets
 {
@@ -20,41 +20,33 @@ namespace ImpostorHqR.Core.Web.Api.WebSockets
             connection.OnClose += () => OnDisconnected?.Invoke(this);
         }
 
-        public async Task Send(string data)
+        public async ValueTask Send(string data)
         {
             try
             {
                 await Connection.Send(data);
             }
-            catch (Fleck.WebSocketException)
+            catch (WebSocketException)
             {
-                closed();
+                Closed();
             }
-            catch (Fleck.ConnectionNotAvailableException)
+            catch (ConnectionNotAvailableException)
             {
-                closed();
+                Closed();
             }
             catch (Exception ex)
             {
-                await LogManager.Instance.Log(new LogEntry()
-                {
-                    Message = $"Error in API user send: {ex}",
-                    Source = this,
-                    Type = LogType.Error
-                });
+                ILogManager.Log($"Error in API Send!", this.ToString(), LogType.Error, true, true, ex);
             }
 
-            void closed()
+            void Closed()
             {
                 OnDisconnected?.Invoke(this);
                 this.Connected = false;
             }
         }
 
-        public void Received(string message)
-        {
-            OnReceive?.Invoke(this, message);
-        }
+        public void Received(string message) => OnReceive?.Invoke(this, message);
 
         public event Action<HqApiUser> OnDisconnected;
 

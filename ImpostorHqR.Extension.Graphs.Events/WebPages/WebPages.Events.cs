@@ -1,11 +1,13 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Diagnostics;
+using System.Drawing;
 using System.Timers;
-using ImpostorHqR.Extension.Api.Interface;
-using ImpostorHqR.Extension.Api.Interface.Web.Page.Api.Graph;
+using ImpostorHqR.Extension.Api;
+using ImpostorHqR.Extension.Api.Api.Web;
 
 namespace ImpostorHqR.Extension.Graphs.Events.WebPages
 {
-    public class EventWebService : IExtensionService
+    public class EventWebPage 
     {
         #region Graphs
 
@@ -36,15 +38,19 @@ namespace ImpostorHqR.Extension.Graphs.Events.WebPages
 
         private IGraphPage Page { get; set; }
 
-        public void Init()
+        private Timer Tmr { get; }
+
+        public static void Create()
         {
-            if (!WebPageConfig.Instance.EnableEventsPage) return;
+            new EventWebPage();
+        }
+
+        public EventWebPage()
+        {
+            Start.OnClosed += Shutdown;
             CreateGraphs();
-            var tmr = new System.Timers.Timer(WebPageConfig.Instance.EventsPageUpdateIntervalSeconds * 1000);
-            tmr.AutoReset = true;
-            tmr.Elapsed += Tick;
-            tmr.Start();
-            this.Page = Proxy.Instance.PreInitialization.PageProvider.GraphPageProvider.Create(new IGraph[]
+            
+            this.Page = IGraphPage.Create(new IGraph[]
             {
                 IGameAlterEventGraph,
                 IGameCreatedEventGraph,
@@ -66,45 +72,49 @@ namespace ImpostorHqR.Extension.Graphs.Events.WebPages
                 IPlayerVentEventGraph,
                 IMeetingEndedEventGraph,
                 IMeetingStartedEventGraph,
-            }, "Impostor All Events / second", WebPageConfig.Instance.EventsPageHandle, WebPageConfig.Instance.EventsPageWidth);
+            }, "Impostor All Events / second", Start.GetConfig().EventsPageHandle, Start.GetConfig().EventsPageWidth);
+            Tmr = new System.Timers.Timer(Start.GetConfig().EventsPageUpdateIntervalSeconds * 1000)
+            {
+                AutoReset = true
+            };
+            Tmr.Elapsed += Tick;
+            Tmr.Start();
         }
 
         private void Tick(object sender, ElapsedEventArgs e)
         {
-            lock (BenchmarkEventListener.syncRoot)
+            lock (BenchmarkEventListener.SyncRoot)
             {
-                this.IGameAlterEventGraph.Update(BenchmarkEventListener.Instance.OnGameAlterRate);
-                this.IGameCreatedEventGraph.Update(BenchmarkEventListener.Instance.OnGameCreatedRate);
-                this.IGameDestroyedEventGraph.Update(BenchmarkEventListener.Instance.OnGameDestroyedRate);
-                this.IGameEndedEventGraph.Update(BenchmarkEventListener.Instance.OnGameEndedRate);
-                this.IGamePlayerJoinedEventGraph.Update(BenchmarkEventListener.Instance.OnGamePlayerJoinedRate);
-                this.IGamePlayerLeftEventGraph.Update(BenchmarkEventListener.Instance.OnGamePlayerLeftRate);
-                this.IGameStartedEventGraph.Update(BenchmarkEventListener.Instance.OnGameStartedRate);
-                this.IGameStartingEventGraph.Update(BenchmarkEventListener.Instance.OnGameStartingRate);
-                this.IPlayerChatEventGraph.Update(BenchmarkEventListener.Instance.OnPlayerChatRate);
-                this.IPlayerCompletedTaskEventGraph.Update(BenchmarkEventListener.Instance.OnPlayerCompletedTaskRate);
-                this.IPlayerDestroyedEventGraph.Update(BenchmarkEventListener.Instance.OnPlayerDestroyedRate);
-                this.IPlayerExileEventGraph.Update(BenchmarkEventListener.Instance.OnPlayerExileRate);
-                this.IPlayerMovementEventGraph.Update(BenchmarkEventListener.Instance.OnPlayerMovementRate);
-                this.IPlayerMurderEventGraph.Update(BenchmarkEventListener.Instance.OnPlayerMurderRate);
-                this.IPlayerSetStartCounterEventGraph.Update(BenchmarkEventListener.Instance.OnPlayerSetStartCounterRate);
-                this.IPlayerSpawnedEventGraph.Update(BenchmarkEventListener.Instance.OnPlayerSpawnedRate);
-                this.IPlayerStartMeetingEventGraph.Update(BenchmarkEventListener.Instance.OnPlayerStartMeetingRate);
-                this.IPlayerVentEventGraph.Update(BenchmarkEventListener.Instance.OnPlayerVentRate);
-                this.IMeetingEndedEventGraph.Update(BenchmarkEventListener.Instance.OnMeetingEndedRate);
-                this.IMeetingStartedEventGraph.Update(BenchmarkEventListener.Instance.OnMeetingStartedRate);
-                this.Page.Update();
+                try
+                {
+                    this.IGameAlterEventGraph.Update(BenchmarkEventListener.Instance.OnGameAlterRate);
+                    this.IGameCreatedEventGraph.Update(BenchmarkEventListener.Instance.OnGameCreatedRate);
+                    this.IGameDestroyedEventGraph.Update(BenchmarkEventListener.Instance.OnGameDestroyedRate);
+                    this.IGameEndedEventGraph.Update(BenchmarkEventListener.Instance.OnGameEndedRate);
+                    this.IGamePlayerJoinedEventGraph.Update(BenchmarkEventListener.Instance.OnGamePlayerJoinedRate);
+                    this.IGamePlayerLeftEventGraph.Update(BenchmarkEventListener.Instance.OnGamePlayerLeftRate);
+                    this.IGameStartedEventGraph.Update(BenchmarkEventListener.Instance.OnGameStartedRate);
+                    this.IGameStartingEventGraph.Update(BenchmarkEventListener.Instance.OnGameStartingRate);
+                    this.IPlayerChatEventGraph.Update(BenchmarkEventListener.Instance.OnPlayerChatRate);
+                    this.IPlayerCompletedTaskEventGraph.Update(BenchmarkEventListener.Instance.OnPlayerCompletedTaskRate);
+                    this.IPlayerDestroyedEventGraph.Update(BenchmarkEventListener.Instance.OnPlayerDestroyedRate);
+                    this.IPlayerExileEventGraph.Update(BenchmarkEventListener.Instance.OnPlayerExileRate);
+                    this.IPlayerMovementEventGraph.Update(BenchmarkEventListener.Instance.OnPlayerMovementRate);
+                    this.IPlayerMurderEventGraph.Update(BenchmarkEventListener.Instance.OnPlayerMurderRate);
+                    this.IPlayerSetStartCounterEventGraph.Update(BenchmarkEventListener.Instance.OnPlayerSetStartCounterRate);
+                    this.IPlayerSpawnedEventGraph.Update(BenchmarkEventListener.Instance.OnPlayerSpawnedRate);
+                    this.IPlayerStartMeetingEventGraph.Update(BenchmarkEventListener.Instance.OnPlayerStartMeetingRate);
+                    this.IPlayerVentEventGraph.Update(BenchmarkEventListener.Instance.OnPlayerVentRate);
+                    this.IMeetingEndedEventGraph.Update(BenchmarkEventListener.Instance.OnMeetingEndedRate);
+                    this.IMeetingStartedEventGraph.Update(BenchmarkEventListener.Instance.OnMeetingStartedRate);
+                    this.Page.Update();
+                }
+                catch (Exception exception)
+                {
+                    ILogManager.Log("FATAL ERROR IN EVENT UPDATE LOOP!", this.ToString(), LogType.Error, ex:exception);
+                }
+                
             }
-        }
-
-        public void PostInit()
-        {
-
-        }
-
-        public void Shutdown()
-        {
-
         }
 
         private readonly Color FillColor = Color.FromArgb(255, 0, 255, 0);
@@ -119,75 +129,81 @@ namespace ImpostorHqR.Extension.Graphs.Events.WebPages
         {
             #region Game Events
 
-            this.IGameAlterEventGraph = Proxy.Instance.PreInitialization.PageProvider.GraphProvider
+            this.IGameAlterEventGraph = IGraph
                 .Create("Game Alter Events", FillColor, LineColor, Span, Delay);
 
-            this.IGameCreatedEventGraph = Proxy.Instance.PreInitialization.PageProvider.GraphProvider
+            this.IGameCreatedEventGraph = IGraph
                 .Create("Game Created Events", FillColor, LineColor, Span, Delay);
 
-            this.IGameDestroyedEventGraph = Proxy.Instance.PreInitialization.PageProvider.GraphProvider
+            this.IGameDestroyedEventGraph = IGraph
                 .Create("Game Destroyed Events", FillColor, LineColor, Span, Delay);
 
-            this.IGameEndedEventGraph = Proxy.Instance.PreInitialization.PageProvider.GraphProvider
+            this.IGameEndedEventGraph = IGraph
                 .Create("Game Ended Events", FillColor, LineColor, Span, Delay);
 
-            this.IGamePlayerJoinedEventGraph = Proxy.Instance.PreInitialization.PageProvider.GraphProvider
+            this.IGamePlayerJoinedEventGraph = IGraph
                 .Create("Game Player Joined Events", FillColor, LineColor, Span, Delay);
 
-            this.IGamePlayerLeftEventGraph = Proxy.Instance.PreInitialization.PageProvider.GraphProvider
+            this.IGamePlayerLeftEventGraph = IGraph
                 .Create("Game Player left Events", FillColor, LineColor, Span, Delay);
 
-            this.IGameStartedEventGraph = Proxy.Instance.PreInitialization.PageProvider.GraphProvider
+            this.IGameStartedEventGraph = IGraph
                 .Create("Game Started Events", FillColor, LineColor, Span, Delay);
 
-            this.IGameStartingEventGraph = Proxy.Instance.PreInitialization.PageProvider.GraphProvider
+            this.IGameStartingEventGraph = IGraph
                 .Create("Game Starting Events", FillColor, LineColor, Span, Delay);
 
             #endregion
 
             #region Player Events
 
-            this.IPlayerChatEventGraph = Proxy.Instance.PreInitialization.PageProvider.GraphProvider
+            this.IPlayerChatEventGraph = IGraph
                 .Create("Player Chat Events", FillColor, LineColor, Span, Delay);
 
-            this.IPlayerCompletedTaskEventGraph = Proxy.Instance.PreInitialization.PageProvider.GraphProvider
+            this.IPlayerCompletedTaskEventGraph = IGraph
                 .Create("Player Completed Task Events", FillColor, LineColor, Span, Delay);
 
-            this.IPlayerDestroyedEventGraph = Proxy.Instance.PreInitialization.PageProvider.GraphProvider
+            this.IPlayerDestroyedEventGraph = IGraph
                 .Create("Player Destroyed Events", FillColor, LineColor, Span, Delay);
 
-            this.IPlayerExileEventGraph = Proxy.Instance.PreInitialization.PageProvider.GraphProvider
+            this.IPlayerExileEventGraph = IGraph
                 .Create("Player Exile Events", FillColor, LineColor, Span, Delay);
 
-            this.IPlayerMovementEventGraph = Proxy.Instance.PreInitialization.PageProvider.GraphProvider
+            this.IPlayerMovementEventGraph = IGraph
                 .Create("Player Movement Events", FillColor, LineColor, Span, Delay);
 
-            this.IPlayerMurderEventGraph = Proxy.Instance.PreInitialization.PageProvider.GraphProvider
+            this.IPlayerMurderEventGraph = IGraph
                 .Create("Player Murder Events", FillColor, LineColor, Span, Delay);
 
-            this.IPlayerSetStartCounterEventGraph = Proxy.Instance.PreInitialization.PageProvider.GraphProvider
+            this.IPlayerSetStartCounterEventGraph = IGraph
                 .Create("Player Set Start Counter Events", FillColor, LineColor, Span, Delay);
 
-            this.IPlayerSpawnedEventGraph = Proxy.Instance.PreInitialization.PageProvider.GraphProvider
+            this.IPlayerSpawnedEventGraph = IGraph
                 .Create("Player Spawned Events", FillColor, LineColor, Span, Delay);
 
-            this.IPlayerStartMeetingEventGraph = Proxy.Instance.PreInitialization.PageProvider.GraphProvider
+            this.IPlayerStartMeetingEventGraph = IGraph
                 .Create("Player Start Meeting Events", FillColor, LineColor, Span, Delay);
 
-            this.IPlayerVentEventGraph = Proxy.Instance.PreInitialization.PageProvider.GraphProvider
+            this.IPlayerVentEventGraph = IGraph
                 .Create("Player Vent Events", FillColor, LineColor, Span, Delay);
 
             #endregion
 
             #region Meeting Events
 
-            this.IMeetingEndedEventGraph = Proxy.Instance.PreInitialization.PageProvider.GraphProvider
+            this.IMeetingEndedEventGraph = IGraph
                 .Create("Meeting Ended Events", FillColor, LineColor, Span, Delay);
 
-            this.IMeetingStartedEventGraph = Proxy.Instance.PreInitialization.PageProvider.GraphProvider
+            this.IMeetingStartedEventGraph = IGraph
                 .Create("Meeting Started Events", FillColor, LineColor, Span, Delay);
 
             #endregion
+        }
+
+        public void Shutdown()
+        {
+            Tmr.Stop();
+            Tmr.Dispose();
         }
     }
 }

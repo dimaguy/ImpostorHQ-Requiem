@@ -1,27 +1,23 @@
 ﻿using Impostor.Api.Events.Player;
 using ImpostorHqR.Core.Command.Processor;
 using ImpostorHqR.Core.Impostor.Events;
-using ImpostorHqR.Core.Services;
+using ImpostorHqR.Extension.Api.Service;
 
 namespace ImpostorHqR.Core.Command
 {
-    public class CommandListener : IService
+    public static class CommandListener
     {
-        public void PostInit()
+        public static void Start()
         {
-            ImpostorPlayerEventListener.Instance.PlayerChat += PlayerChat;
+            IServiceManager.GetSingleton<ImpostorPlayerEventListener>().PlayerChat += PlayerChat;
         }
 
-        private void PlayerChat(IPlayerChatEvent obj)
+        private static void PlayerChat(IPlayerChatEvent obj)
         {
             if (obj.Message[0] == '/')
             {
                 CommandProcessor.ProcessGameChat(obj.ClientPlayer, obj.Message);
             }
         }
-
-        public void Activate() { }
-
-        public void Shutdown() { }
     }
 }

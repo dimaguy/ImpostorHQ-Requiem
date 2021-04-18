@@ -1,33 +1,24 @@
-﻿using System.Collections.Generic;
+﻿using System;
 using System.Reflection;
-using ImpostorHqR.Core.Extension.ComponentBus;
-using ImpostorHqR.Extension.Api.Loader;
+using ImpostorHqR.Extension.Api;
 
 namespace ImpostorHqR.Core.Extension.Loader
 {
-    public class Extension
+    public class LoaderExtension
     {
-        public string Author => Entry.Author;
-
-        public string PackageName => Entry.PackageName;
-
-        public string FriendlyName => Entry.Name;
-
-        public string PluginVersion => Entry.Version;
-
         public Assembly Assembly { get; }
 
-        public IExtensionEntryPoint Entry { get; }
+        public Type Start { get; }
 
-        public ExtensionProxy Proxy { get; }
+        public IExtensionInformation Information { get; }
 
-        public List<ComponentBusItem> Exports { get; set; }
+        public string[] Dependencies { get; set; }
 
-        public Extension(IExtensionEntryPoint entryPoint, ExtensionProxy proxy, Assembly assembly)
+        public LoaderExtension(Assembly assembly, Type start, IExtensionInformation info)
         {
             this.Assembly = assembly;
-            this.Proxy = proxy;
-            this.Entry = entryPoint;
+            this.Start = start;
+            this.Information = info;
         }
     }
 }

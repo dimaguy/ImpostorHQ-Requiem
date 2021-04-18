@@ -1,28 +1,15 @@
-﻿using ImpostorHqR.Extension.Api.Interface;
+﻿using ImpostorHqR.Extension.Api.Configuration;
 
 namespace ImpostorHqR.Extension.Graphs.Events.WebPages
 {
-    public class WebPageConfig : IConfigurationHolder
+    [Configuration(false, true)]
+    public class WebPageConfig
     {
-        public static WebPageConfig Instance;
-
-        public bool EnableChatPage { get; set; }
-        public string ChatPageHandle { get; set; }
-
-        public bool EnableEventsPage { get; set; }
-        public string EventsPageHandle { get; set; }
-        public byte EventsPageWidth { get; set; }
-        public ushort EventsPageUpdateIntervalSeconds { get; set; }
-
-        public void SetDefaults()
-        {
-            this.EnableChatPage = true;
-            this.ChatPageHandle = "playerchat";
-
-            this.EnableEventsPage = true;
-            this.EventsPageHandle = "impostorevents";
-            this.EventsPageWidth = 100;
-            this.EventsPageUpdateIntervalSeconds = 1;
-        }
+        public bool EnableChatPage { get; set; } = true;
+        public string ChatPageHandle { get; set; } = "playerchat";
+        public bool EnableEventsPage { get; set; } = true;
+        public string EventsPageHandle { get; set; } = "impostorevents";
+        public byte EventsPageWidth { get; set; } = 100;
+        public ushort EventsPageUpdateIntervalSeconds { get; set; } = 1;
     }
 }

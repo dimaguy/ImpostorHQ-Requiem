@@ -10,13 +10,13 @@ using ImpostorHqR.Core.Web.Http.Server;
 using ImpostorHqR.Core.Web.Http.Server.Response;
 using ImpostorHqR.Core.Web.Http.Server.Response.Fields;
 using ImpostorHqR.Core.Web.Page.Generator.Api.ApiTablePage.Splicer;
-using ImpostorHqR.Extension.Api.Interface.Logging;
-using ImpostorHqR.Extension.Api.Interface.Web.Page.Api.Simple;
-using ImpostorHqR.Extensions.Api.Interface.Logging;
+using ImpostorHqR.Extension.Api;
+using ImpostorHqR.Extension.Api.Api.Web;
+using ImpostorHqR.Extension.Api.Configuration;
 
 namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiTablePage
 {
-    public class SimpleApiPage : ISimpleApiPage
+    public class SimpleApiPage : IApiPage
     {
         public string Handle { get; }
 
@@ -32,15 +32,15 @@ namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiTablePage
 
         public SimpleApiPage(Color elementColor, string title, string handle)
         {
-            if (WebApiHandleStore.Instance.Handles.Any(h => h.HandleId.Equals(handle)))
+            if (WebApiHandleStore.Handles.Any(h => h.HandleId.Equals(handle)))
             {
-                ConsoleLogging.Instance.LogError($"API Handler with the same name [{handle}] already exists. The page will not be registered.", this, true);
+                ILogManager.Log($"API Handler with the same name [{handle}] already exists. The page will not be registered.", this.ToString(), LogType.Error);
                 return;
             }
 
-            if (HttpHandleStore.Instance.Handles.Any(h => h.Path.Equals(handle)))
+            if (HttpHandleStore.Handles.Any(h => h.Value.Path.Equals(handle)))
             {
-                ConsoleLogging.Instance.LogError($"Http handle with the same name [{handle}] already exists. The page will not be registered.", this, true);
+                ILogManager.Log($"Http handle with the same name [{handle}] already exists. The page will not be registered.", this.ToString(), LogType.Error);
                 return;
             }
 
@@ -49,36 +49,29 @@ namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiTablePage
             this.Handle = handle;
             this.ElementColor = elementColor;
             this.Handler = new ApiHandleHolder(handle);
-            WebApiHandleStore.Instance.Add(this.Handler);
+            WebApiHandleStore.Add(this.Handler);
             // compile page
             this.Html = SimpleApiPageSplicerConstant.Page.Replace(SimpleApiPageSplicerConstant.ReplaceInTitle, title);
             this.Html = this.Html.Replace(SimpleApiPageSplicerConstant.ReplaceInColor, GetColor());
-            this.Html = this.Html.Replace(SimpleApiPageSplicerConstant.ReplaceInPort, ConfigHolder.Instance.ApiPort.ToString());
+            this.Html = this.Html.Replace(SimpleApiPageSplicerConstant.ReplaceInPort, IConfigurationStore.GetByType<RequiemConfig>().ApiPort.ToString());
             this.Html = this.Html.Replace(SimpleApiPageSplicerConstant.ReplaceInHandle, handle);
             using (var ms = new MemoryStream())
             {
-                var headers = new HttpResponseHeaders(this.Html.Length, ResponseStatusCode.Ok200, new IResponseField[] {
+                using var headers = new HttpResponseHeaders(this.Html.Length, ResponseStatusCode.Ok200, new IResponseField[] {
                     new FieldAcceptRanges(HttpConstant.AcceptRanges),
                     new FieldServer(HttpConstant.ServerName),
                     new FieldContentType("text/html")
                 }, "HTTP/1.1");
-
-                ms.Write(headers.Compile());
+                var h = headers.Compile();
+                ms.Write(h.Item1,0,h.Item2);
                 ms.Write(Encoding.UTF8.GetBytes(this.Html));
                 this.HtmlBytes = ms.ToArray();
             }
             var webHandle = new SpecialHandler(handle, async (client) =>
             {
                 await client.SafeWriteAsync(this.HtmlBytes);
-                await LogManager.Instance.Log(new LogEntry()
-                {
-                    Message = $"Served SimpleApiPage [{handle}] to {client.Client.RemoteEndPoint}.",
-                    Source = this,
-                    Type = LogType.Debug
-                });
             });
-            HttpHandleStore.Instance.AddHandler(webHandle);
-            ConsoleLogging.Instance.LogInformation($"Registered simple api page at [{handle}].", true);
+            HttpHandleStore.AddHandler(webHandle);
         }
 
         private string GetColor()
@@ -86,9 +79,9 @@ namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiTablePage
             return $"rgb({ElementColor.R}, {ElementColor.G}, {ElementColor.B})";
         }
 
-        public void Push(ISimpleApiPageElement element)
+        public void Push(ApiPageElement element)
         {
-            Handler.Push(element as SimpleApiPageElement);
+            Handler.Push(new SimpleApiPageElement(element.Message, element.BackgroundColor));
         }
 
         public void Clear()

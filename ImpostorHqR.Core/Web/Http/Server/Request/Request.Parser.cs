@@ -11,6 +11,8 @@ namespace ImpostorHqR.Core.Web.Http.Server.Request
     {
         private static readonly char[] RangeField = new char[] { 'R', 'a', 'n', 'g', 'e', ':' };
 
+        private static readonly bool Windows = (System.Environment.OSVersion.Platform == PlatformID.Win32NT);
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static HttpInitialRequest? ParseRequest(string str)
         {
@@ -26,6 +28,7 @@ namespace ImpostorHqR.Core.Web.Http.Server.Request
             data = data.Slice(start);
 
             var path = data.Slice(1, data.IndexOf(' ') - 1);
+            VerifyPathPlatform(ref path);
             result.Path = new string(path);
 
             var version = data.Slice(path.Length + 2, 8);
@@ -71,15 +74,26 @@ namespace ImpostorHqR.Core.Web.Http.Server.Request
                     val.Range = rangeValue;
                     list.Add(val);
                 }
-                else
-                {
-                    ConsoleLogging.Instance.LogError($"Unknown HTTP range method: {rangeValue.From} - {rangeValue.To}", null, true);
-                }
             }
             result.Ranges = list;
 
             return result;
         }
 
+        // !!! Unsafe! Breaks trust! Don't do this anywhere else!
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static unsafe void VerifyPathPlatform(ref ReadOnlySpan<char> str)
+        {
+            if (Windows)
+            {
+                fixed (char* ptr = &str[0])
+                {
+                    for (var i = 0; i < str.Length; i++)
+                    {
+                        if (ptr[i] == '/') ptr[i] = '\\';
+                    }
+                }
+            }
+        }
     }
 }

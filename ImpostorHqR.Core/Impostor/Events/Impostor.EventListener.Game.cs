@@ -5,10 +5,6 @@ namespace ImpostorHqR.Core.Impostor.Events
 {
     public class ImpostorGameEventListener : IEventListener
     {
-        public static ImpostorGameEventListener Instance;
-
-        public ImpostorGameEventListener() => Instance = this;
-
         #region Game Events
 
         [EventListener]

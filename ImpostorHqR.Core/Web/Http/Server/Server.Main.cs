@@ -1,75 +1,82 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using HqResearch.Ssl;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using ImpostorHqR.Core.Configuration;
 using ImpostorHqR.Core.Logging;
-using ImpostorHqR.Core.Services;
+using ImpostorHqR.Core.Web.Api.WebSockets.Handles;
 using ImpostorHqR.Core.Web.Common.Protection.DoS;
 using ImpostorHqR.Core.Web.Http.Server.Client;
+using ImpostorHqR.Extension.Api;
+using ImpostorHqR.Extension.Api.Configuration;
 
 namespace ImpostorHqR.Core.Web.Http.Server
 {
-    class ServerMain : IService
+    //TODO: INSTANCE
+    static class HttpServer
     {
-        public static ServerMain Instance;
+        public static X509Certificate2 Ssl = SslCertificateProvider.GetCertificate("anti.the-dying-of-the-light.who");
 
-        public X509Certificate2 Ssl = SslCertificateProvider.GetCertificate("anti.the-dying-of-the-light.who");
+        private static bool Cancel { get; set; }
 
-        private bool Cancel { get; set; }
+        private static Socket Listener { get; set; }
 
-        private TcpListener Listener { get; set; }
-
-        public ServerMain()
+        public static void Start()
         {
-            Instance = this;
+            const BindingFlags flags = BindingFlags.Public | BindingFlags.Static;
+            typeof(IServerLoad).GetProperty("GetHttpActiveThreads", flags)!.SetValue(null, new Func<int>(HttpClientWorkPool.GetActiveThreads));
+            typeof(IServerLoad).GetProperty("GetHttpRequestRate", flags)!.SetValue(null, new Func<int>(() => HttpClientWorkPool.RequestsPerSecond));
+            typeof(IServerLoad).GetProperty("GetHttpRateKbPerSecond", flags)!.SetValue(null, new Func<int>(() => HttpClientWorkPool.FileDataRateKbPerSecond));
+            typeof(IServerLoad).GetProperty("GetCacheSizeKb", flags)!.SetValue(null, new Func<int>(() => HttpServerFileCache.CurrentSize));
+            typeof(IServerLoad).GetProperty("GetApiUsersCount", flags)!.SetValue(null, new Func<int>(WebApiHandleStore.GetClientCount));
+
+            ILogManager.Log($"Starting HTTP{(IConfigurationStore.GetByType<RequiemConfig>().EnableSsl ? "S" : "")} server on {IConfigurationStore.GetByType<RequiemConfig>().HttpPort}.", "HTTP Server", LogType.Information);
+            Listener = new Socket(SocketType.Stream, ProtocolType.Tcp);
+            Listener.Bind(new IPEndPoint(IPAddress.Any, IConfigurationStore.GetByType<RequiemConfig>().HttpPort));
+            Listener.Listen();
+            HqServerProtector.OnBlocked += OnClientBlocked;
+
+            var listenArgs = new SocketAsyncEventArgs();
+            listenArgs.Completed += new EventHandler<SocketAsyncEventArgs>(AcceptClient);
+
+            Listener.AcceptAsync(listenArgs);
         }
 
-        public void Activate() { }
-
-        public void PostInit()
+        private static void OnClientBlocked(IPAddress obj)
         {
-            ConsoleLogging.Instance.LogDebug($"Starting HTTP{(ConfigHolder.Instance.EnableSsl ? "S" : "")} server on {ConfigHolder.Instance.HttpPort}.", this, true);
-            this.Listener = new TcpListener(IPAddress.Any, ConfigHolder.Instance.HttpPort);
-            this.Listener.Start();
-            _ = ListenAsync();
+            ILogManager.Log($"Rate-limited connection attempt from {obj}!", "HTTP Server", LogType.Warning);
         }
 
-        private async Task ListenAsync()
+        private static void AcceptClient(object sender, SocketAsyncEventArgs listenEventArgs)
         {
-            ConsoleLogging.Instance.LogDebug($"HTTP acceptor thread started.", this, true);
-            while (!Cancel)
+            if (Cancel) return;
+            var socket = listenEventArgs.AcceptSocket;
+            var listen = (Socket) sender;
+            listenEventArgs.AcceptSocket = null;
+
+            Trace.Assert(socket!=null, "Listen socket null! Server.Main L65");
+
+            listen.AcceptAsync(listenEventArgs);
+
+            if (HqServerProtector.IsAttacking(((IPEndPoint)socket.RemoteEndPoint)?.Address))
             {
-                try
-                {
-                    var client = await this.Listener.AcceptSocketAsync();
-                    if (Cancel) return;
-                    if (HqServerProtector.Instance.IsAttacking(((IPEndPoint) client.RemoteEndPoint)?.Address))
-                    {
-                        client.Close();
-                        continue;
-                    }
-
-                    HttpClientWorkPool.Instance.PostWorkItem(client);
-                }
-                catch (SocketException)
-                {
-                    //shutdown
-                }
-                catch (Exception e)
-                {
-                    ConsoleLogging.Instance.LogError($"Error in HTTP acceptor: {e}", this, true);
-                }
+                socket.Close();
+                return;
             }
+
+            _ = HttpClientWorkPool.ProcessWorkItemAsync(socket);
         }
 
-        public void Shutdown()
+        public static void Shutdown()
         {
-            this.Cancel = true;
-            this.Listener.Stop();
+            Cancel = true;
+            Listener.Close();
         }
     }
 }

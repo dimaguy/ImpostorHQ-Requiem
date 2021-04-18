@@ -1,34 +1,30 @@
-﻿using System.Linq;
-using ImpostorHqR.Core.ObjectPool.Pools.StringBuilder;
+﻿using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using ImpostorHqR.Core.Web.Api.WebSockets;
+using ImpostorHqR.Extension.Api;
 
 namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiGraphPage
 {
-    public class ApiGraphPageUpdateMessage : IHqApiOutgoingMessage
+    public readonly struct ApiGraphPageUpdateMessage : IHqApiOutgoingMessage
     {
-        public ApiPageElementGraph[] Values { get; }
+        public IEnumerable<ApiGraph> Values { get; }
 
-        public ApiGraphPageUpdateMessage(ApiPageElementGraph[] values)
+        public ApiGraphPageUpdateMessage(IEnumerable<ApiGraph> values)
         {
             this.Values = values;
         }
 
         public string Serialize()
         {
-            var sb = StringBuilderPool.Pool.Get();
+            using var sb = IReusableStringBuilder.Get();
             sb.AppendLine("{");
-
             foreach (var value in Values)
             {
                 sb.AppendLine($"\"{value.Variable}\": {value.Value}{(value == Values.Last() ? "" : ",")}");
             }
-
             sb.AppendLine("}");
-
             var data = sb.ToString();
-
-            StringBuilderPool.Pool.Return(sb);
-
             return data;
         }
     }

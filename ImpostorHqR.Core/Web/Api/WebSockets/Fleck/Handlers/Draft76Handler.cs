@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using ImpostorHqR.Core.ObjectPool.Pools.StringBuilder;
+using Fleck;
+using Fleck.Handlers;
+using ImpostorHqR.Extension.Api;
 
-namespace Fleck.Handlers
+namespace ImpostorHqR.Core.Web.Api.WebSockets.Fleck.Handlers
 {
     public static class Draft76Handler
     {
@@ -62,7 +64,7 @@ namespace Fleck.Handlers
         {
             FleckLog.Debug("Building Draft76 Response");
             // project created by an ti, given to di ma.
-            using var builder = StringBuilderPool.Instance.Get();
+            using var builder = IReusableStringBuilder.Get();
             builder.StringBuilder.Append("HTTP/1.1 101 WebSocket Protocol Handshake\r\n");
             builder.StringBuilder.Append("Upgrade: WebSocket\r\n");
             builder.StringBuilder.Append("Connection: Upgrade\r\n");

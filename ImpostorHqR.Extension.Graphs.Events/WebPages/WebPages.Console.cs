@@ -1,40 +1,86 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Drawing;
+using System.Globalization;
+using System.Runtime.InteropServices.ComTypes;
+using System.Text;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using ImpostorHqR.Extension.Api.Interface;
-using ImpostorHqR.Extension.Api.Interface.Web.Page.Api.Console;
+using ImpostorHqR.Extension.Api;
+using ImpostorHqR.Extension.Api.Api.Web;
 using Microsoft.Extensions.Logging;
 
 namespace ImpostorHqR.Extension.Graphs.Events.WebPages
 {
-    public class ConsoleWebPage : IExtensionService
+    public class ConsoleWebPage
     {
         public static readonly Channel<string> Updates = Channel.CreateUnbounded<string>(new UnboundedChannelOptions()
             {SingleReader = true, SingleWriter = false});
 
         private IReadonlyConsolePage Page { get; set; }
 
-        public void Init()
-        {
-            if(!WebPageConfig.Instance.EnableEventsPage)return;
-            this.Page =  Proxy.Instance.PreInitialization.PageProvider.ReadonlyConsolePageProvider.ProduceApiPage(
-                "Server-Wide Chat", Color.Lime, "Game chat will be displayed here.",
-                WebPageConfig.Instance.ChatPageHandle);
+        private bool Cancel = false;
 
-            Task.Run(async () =>
-            {
-                await foreach (var message in Updates.Reader.ReadAllAsync())
-                {
-                    Page.Push(string.Concat(message,"\n"));
-                }
-            });
+        private readonly CancellationTokenSource Cts = new CancellationTokenSource();
+
+        public static void Create()
+        {
+            new ConsoleWebPage();
         }
 
-        public void PostInit() { }
+        public ConsoleWebPage()
+        {
+            if (!Start.GetConfig().EnableEventsPage) return;
+            Start.OnClosed += Shutdown;
+            this.Page = IReadonlyConsolePage.Create("Server-Wide Chat", Color.Lime, "Game chat will be displayed here.", Start.GetConfig().ChatPageHandle);
+            _ = QueueAndSend();
+        }
 
-        public void Shutdown() { }
+        private async Task QueueAndSend()
+        {
+            try
+            {
+                var sb = new StringBuilder();
+                var locks = new SemaphoreSlim(1,1);
+                var enumerable = Updates.Reader.ReadAllAsync(Cts.Token);
+                _ = Task.Run(async () =>
+                {
+                    //dequeue and buffer
+                    await foreach (var message in enumerable)
+                    {
+                        await locks.WaitAsync(Cts.Token);
+                        sb.AppendLine(message);
+                        locks.Release();
+                    }
+                });
+
+                while (!Cts.IsCancellationRequested)
+                {
+                    await locks.WaitAsync(Cts.Token);
+                    if (sb.Length > 0)
+                    {
+                        Page.Push(sb.ToString());
+                        sb.Clear();
+                    }
+                    locks.Release();
+                    await Task.Delay(500);
+                }
+            }
+            catch (Exception e)
+            {
+                ILogManager.Log("FATAL ERROR IN PLAYER CHAT UPDATER!", this.ToString(), LogType.Error, ex:e);
+            }
+            // instead of pushing an update for each message (which can result in massive PPS), 
+            // aggregate more messages per update.
+
+        }
+
+        public void Shutdown()
+        {
+            Cancel = true;
+            Cts.Cancel();
+        }
     }
 }

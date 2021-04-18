@@ -10,9 +10,10 @@ using ImpostorHqR.Core.Web.Http.Server.Response;
 using ImpostorHqR.Core.Web.Http.Server.Response.Fields;
 using ImpostorHqR.Core.Web.Page.Generator.Api.ApiConsolePage.Splicer;
 using ImpostorHqR.Core.Web.Page.Generator.Api.ApiTablePage;
-using ImpostorHqR.Extension.Api.Interface.Logging;
-using ImpostorHqR.Extension.Api.Interface.Web.Page.Api.Console;
-using ImpostorHqR.Extensions.Api.Interface.Logging;
+using ImpostorHqR.Extension.Api;
+using ImpostorHqR.Extension.Api.Api.Web;
+using ImpostorHqR.Extension.Api.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiConsolePage
 {
@@ -41,38 +42,31 @@ namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiConsolePage
 
             this.Html = ApiConsolePageSplicer.Html.Replace(ApiConsolePageSplicer.ReplaceInTitle, title);
             this.Html = this.Html.Replace(ApiConsolePageSplicer.ReplaceInColor, GetColor());
-            this.Html = this.Html.Replace(ApiConsolePageSplicer.ReplaceInPort, ConfigHolder.Instance.ApiPort.ToString());
+            this.Html = this.Html.Replace(ApiConsolePageSplicer.ReplaceInPort, IConfigurationStore.GetByType<RequiemConfig>().ApiPort.ToString());
             this.Html = this.Html.Replace(ApiConsolePageSplicer.ReplaceInHandle, handle);
             this.Html = this.Html.Replace(ApiConsolePageSplicer.ReplaceInMainPlaceholder, placeholder);
 
             this.Handler = new ApiHandleHolder(handle);
-            WebApiHandleStore.Instance.Add(this.Handler);
+            WebApiHandleStore.Add(this.Handler);
 
             using (var ms = new MemoryStream())
             {
-                var headers = new HttpResponseHeaders(this.Html.Length, ResponseStatusCode.Ok200, new IResponseField[]
+                using var headers = new HttpResponseHeaders(this.Html.Length, ResponseStatusCode.Ok200, new IResponseField[]
                 {
                     new FieldAcceptRanges(HttpConstant.AcceptRanges),
                     new FieldServer(HttpConstant.ServerName),
                     new FieldContentType("text/html")
                 }, "HTTP/1.1");
-
-                ms.Write(headers.Compile());
+                var h = headers.Compile();
+                ms.Write(h.Item1,0,h.Item2);
                 ms.Write(Encoding.UTF8.GetBytes(this.Html));
                 this.HtmlBytes = ms.ToArray();
             }
             var webHandle = new SpecialHandler(handle, async (client) =>
             {
                 await client.SafeWriteAsync(this.HtmlBytes);
-                await LogManager.Instance.Log(new LogEntry()
-                {
-                    Message = $"Served Simple Console Api Page [{handle}] to {client.Client.RemoteEndPoint}.",
-                    Source = this,
-                    Type = LogType.Debug
-                });
             });
-            HttpHandleStore.Instance.AddHandler(webHandle);
-            ConsoleLogging.Instance.LogInformation($"Registered simple console api page at [{handle}].", true);
+            HttpHandleStore.AddHandler(webHandle);
         }
 
         private string GetColor()

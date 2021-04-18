@@ -4,25 +4,26 @@ using ImpostorHqR.Core.Web.Api.WebSockets;
 
 namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiTablePage
 {
-    public class SimpleApiPageSetMessage : IHqApiOutgoingMessage
+    public readonly struct SimpleApiPageSetMessage : IHqApiOutgoingMessage
     {
-        public bool Clear => false;
+        private static readonly string Alpha = $"rgb({System.Drawing.Color.Transparent.R}, {System.Drawing.Color.Transparent.G}, {System.Drawing.Color.Transparent.B})";
 
-        public bool Set => true;
+        public bool Clear { get; }
+
+        public bool Set { get; }
 
         public string Message { get; }
 
         public string Color { get; }
 
-        public SimpleApiPageSetMessage(string text, Color? color)
+        public SimpleApiPageSetMessage(string text, Color? color = null)
         {
-            if (color != null) this.Color = $"rgb({color?.R}, {color?.G}, {color?.B})";
+            this.Clear = false;
+            this.Set = true;
+            this.Color = color != null ? $"rgba({color?.R}, {color?.G}, {color?.B}, {color?.A})" : Alpha;
             this.Message = text;
         }
 
-        public string Serialize()
-        {
-            return JsonSerializer.Serialize(this);
-        }
+        public string Serialize() => JsonSerializer.Serialize(this);
     }
 }
