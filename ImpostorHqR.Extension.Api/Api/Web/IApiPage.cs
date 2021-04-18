@@ -9,16 +9,9 @@ namespace ImpostorHqR.Extension.Api.Api.Web
 
         private static Converter<(string, Color, string), IApiPage> _Provider;
 
-        private static Converter<(string, Color, string, WebPageAuthenticationOption), IApiPage> _SecureProvider;
-
         public static IApiPage Create(string title, Color elementColor, string handle)
         {
             return _Provider.Invoke((title, elementColor, handle));
-        }
-
-        public static IApiPage Create(string title, Color elementColor, string handle, WebPageAuthenticationOption credentials)
-        {
-            return _SecureProvider.Invoke((title, elementColor, handle, credentials));
         }
 
         #endregion

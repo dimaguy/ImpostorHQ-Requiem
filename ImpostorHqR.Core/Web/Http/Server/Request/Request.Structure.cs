@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using System.Collections.Generic;
-using ImpostorHqR.Core.Web.Http.Handler;
 using ImpostorHqR.Core.Web.Http.Server.Request.Fields;
 
 namespace ImpostorHqR.Core.Web.Http.Server.Request
@@ -20,7 +19,5 @@ namespace ImpostorHqR.Core.Web.Http.Server.Request
         public string HttpVersion { get; set; }
 
         public string Path { get; set; }
-
-        public SpecialHandler.HttpAuthOptions? Credentials { get; set; }
     }
 }

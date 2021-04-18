@@ -74,7 +74,6 @@ namespace ImpostorHqR.Core.Web.Http.Server.Response
                 ResponseStatusCode.Ok200 => "200 OK",
                 ResponseStatusCode.PartialContent206 => "206 Partial Content",
                 ResponseStatusCode.ServiceUnavailable503 => "503 Service Unavailable",
-                ResponseStatusCode.Unauthorized401 => "401 Unauthorized",
                 _ => throw new Exception("spooky")
             };
         }

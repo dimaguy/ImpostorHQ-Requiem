@@ -6,7 +6,6 @@
         FileNotFound404,
         NotImplemented501,
         PartialContent206,
-        ServiceUnavailable503,
-        Unauthorized401
+        ServiceUnavailable503
     }
 }

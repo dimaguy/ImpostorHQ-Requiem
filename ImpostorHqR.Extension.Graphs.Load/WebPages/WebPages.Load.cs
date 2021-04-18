@@ -42,29 +42,14 @@ namespace ImpostorHqR.Extension.Graphs.Load.WebPages
 
         public void Start()
         {
-            var cfg = IConfigurationStore.GetByType<WebPageConfig>();
-            if (!cfg.EnableLoadPage) return;
-            Trace.Assert(!string.IsNullOrEmpty(cfg.LoadPageHandle), "Load page handle cannot be empty!");
+            if (!IConfigurationStore.GetByType<WebPageConfig>().EnableLoadPage) return;
 
             AppDomain.CurrentDomain.FirstChanceException += OnException;
 
             GenerateGraphs();
-            if (!cfg.LoadPageRequiresAuthentication)
-            {
-                this.Page = IGraphPage.Create(Graphs.ToArray(), "System Load Information",
-                    cfg.LoadPageHandle,
-                    cfg.LoadPageWidth);
-            }
-            else
-            {
-                Trace.Assert(!string.IsNullOrEmpty(cfg.LoadPagePassword), "Load page password cannot be empty!");
-                Trace.Assert(!string.IsNullOrEmpty(cfg.LoadPageUser), "Load page user cannot be empty!");
-                this.Page = IGraphPage.Create(Graphs.ToArray(), "System Load Information",
-                    cfg.LoadPageHandle,
-                    cfg.LoadPageWidth, new WebPageAuthenticationOption(cfg.LoadPageUser, cfg.LoadPagePassword));
-            }
 
-            
+            this.Page = IGraphPage.Create(Graphs.ToArray(), "System Load Information", IConfigurationStore.GetByType<WebPageConfig>().LoadPageHandle, IConfigurationStore.GetByType<WebPageConfig>().LoadPageWidth);
+
             var tmr = new System.Timers.Timer(IConfigurationStore.GetByType<WebPageConfig>().LoadPageIntervalSeconds * 1000) { AutoReset = true };
             tmr.Elapsed += Tick;
             tmr.Start();

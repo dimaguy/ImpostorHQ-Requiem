@@ -17,7 +17,7 @@ namespace Fleck
         public const UInt32 KeepAliveInterval = 60000;
         public const UInt32 RetryInterval = 10000;
 
-        public readonly Socket _socket;
+        private readonly Socket _socket;
         private Stream _stream;
         private CancellationTokenSource _tokenSource;
         private TaskFactory _taskFactory;

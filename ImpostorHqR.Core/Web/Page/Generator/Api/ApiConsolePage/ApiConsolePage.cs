@@ -33,7 +33,7 @@ namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiConsolePage
 
         private byte[] HtmlBytes { get; }
 
-        public ApiConsolePage(Color boxColor, string title, string handle, string placeholder, WebPageAuthenticationOption? creds = null)
+        public ApiConsolePage(Color boxColor, string title, string handle, string placeholder)
         {
             this.Handle = handle;
             this.Title = title;
@@ -49,49 +49,24 @@ namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiConsolePage
             this.Handler = new ApiHandleHolder(handle);
             WebApiHandleStore.Add(this.Handler);
 
-            if (creds == null)
+            using (var ms = new MemoryStream())
             {
-                using (var ms = new MemoryStream())
+                using var headers = new HttpResponseHeaders(this.Html.Length, ResponseStatusCode.Ok200, new IResponseField[]
                 {
-                    using var headers = new HttpResponseHeaders(this.Html.Length, ResponseStatusCode.Ok200,
-                        new IResponseField[]
-                        {
-                            new FieldAcceptRanges(HttpConstant.AcceptRanges),
-                            new FieldServer(HttpConstant.ServerName),
-                            new FieldContentType("text/html")
-                        }, "HTTP/1.1");
-                    var h = headers.Compile();
-                    ms.Write(h.Item1, 0, h.Item2);
-                    ms.Write(Encoding.UTF8.GetBytes(this.Html));
-                    this.HtmlBytes = ms.ToArray();
-                }
-
-                var webHandle = new SpecialHandler(handle,
-                    async (client) => { await client.SafeWriteAsync(this.HtmlBytes); });
-                HttpHandleStore.AddHandler(webHandle);
+                    new FieldAcceptRanges(HttpConstant.AcceptRanges),
+                    new FieldServer(HttpConstant.ServerName),
+                    new FieldContentType("text/html")
+                }, "HTTP/1.1");
+                var h = headers.Compile();
+                ms.Write(h.Item1,0,h.Item2);
+                ms.Write(Encoding.UTF8.GetBytes(this.Html));
+                this.HtmlBytes = ms.ToArray();
             }
-            else
+            var webHandle = new SpecialHandler(handle, async (client) =>
             {
-                using (var ms = new MemoryStream())
-                {
-                    using var headers = new HttpResponseHeaders(this.Html.Length, ResponseStatusCode.Ok200,
-                        new IResponseField[]
-                        {
-                            new FieldAcceptRanges(HttpConstant.AcceptRanges),
-                            new FieldServer(HttpConstant.ServerName),
-                            new FieldContentType("text/html"),
-                            new FieldAuthentication("Basic", "Gallifrey"), 
-                        }, "HTTP/1.1");
-                    var h = headers.Compile();
-                    ms.Write(h.Item1, 0, h.Item2);
-                    ms.Write(Encoding.UTF8.GetBytes(this.Html));
-                    this.HtmlBytes = ms.ToArray();
-                }
-
-                var webHandle = new SpecialHandler(handle,
-                    async (client) => { await client.SafeWriteAsync(this.HtmlBytes); }, new SpecialHandler.HttpAuthOptions(creds.Value.User, creds.Value.Password));
-                HttpHandleStore.AddHandler(webHandle);
-            }
+                await client.SafeWriteAsync(this.HtmlBytes);
+            });
+            HttpHandleStore.AddHandler(webHandle);
         }
 
         private string GetColor()

@@ -8,16 +8,10 @@ namespace ImpostorHqR.Extension.Api.Api.Web
         #region Provider
 
         private static Converter<(string, Color, string, string), IReadonlyConsolePage> _Provider;
-        private static Converter<(string, Color, string, string, WebPageAuthenticationOption), IReadonlyConsolePage> _SecureProvider;
 
         public static IReadonlyConsolePage Create(string title, Color boxColor, string placeholder, string handle)
         {
             return _Provider.Invoke((title, boxColor, placeholder, handle));
-        }
-
-        public static IReadonlyConsolePage Create(string title, Color boxColor, string placeholder, string handle, WebPageAuthenticationOption credentials)
-        {
-            return _SecureProvider.Invoke((title, boxColor, placeholder, handle, credentials));
         }
 
         #endregion
