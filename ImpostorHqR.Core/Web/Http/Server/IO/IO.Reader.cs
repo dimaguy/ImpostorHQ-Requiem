@@ -8,10 +8,8 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using ImpostorHqR.Core.Logging;
-using ImpostorHqR.Core.ObjectPool.Pools.StringBuilder;
-using ImpostorHqR.Extension.Api.Interface.Helpers.ObjectPool.Included;
-using ImpostorHqR.Extension.Api.Interface.Logging;
-using ImpostorHqR.Extensions.Api.Interface.Logging;
+using ImpostorHqR.Extension.Api;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ImpostorHqR.Core.Web.Http.Server.IO
 {
@@ -21,11 +19,11 @@ namespace ImpostorHqR.Core.Web.Http.Server.IO
         private static readonly ArrayPool<byte> Pool = ArrayPool<byte>.Shared;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<string> ReadLineSizedBuffered(Stream stream, ushort length = 128)
+        public static async ValueTask<string> ReadLineSizedBuffered(Stream stream, ushort length = 128)
         {
             stream.ReadTimeout = HttpConstant.ReadTimeout;
             var buffer = Pool.Rent(length);
-            using var sb = StringBuilderPool.Instance.Get();
+            using var sb = IReusableStringBuilder.Get();
             var total = 0;
             try
             {
@@ -55,11 +53,7 @@ namespace ImpostorHqR.Core.Web.Http.Server.IO
             }
             catch (Exception ex)
             {
-                await LogManager.Instance.Log(new LogEntry()
-                {
-                    Message = $"Http line read error: {ex.ToString()}",
-                    Type = LogType.Error
-                });
+                ILogManager.Log("Http read line error.","IO.Reader", LogType.Error, toConsole:false, ex:ex);
                 return null;
             }
             finally
@@ -68,6 +62,7 @@ namespace ImpostorHqR.Core.Web.Http.Server.IO
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool ProcessChunks(byte[] buffer, int length, int read, IReusableStringBuilder sb)
         {
             Span<char> chars = stackalloc char[length];

@@ -2,7 +2,7 @@
 
 namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiTablePage
 {
-    public class SimpleApiPageClearMessage : IHqApiOutgoingMessage
+    public struct SimpleApiPageClearMessage : IHqApiOutgoingMessage
     {
         public string Serialize()
         {

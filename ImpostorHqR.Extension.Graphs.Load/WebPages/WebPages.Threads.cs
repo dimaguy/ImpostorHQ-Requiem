@@ -1,14 +1,17 @@
 ﻿using System;
 using System.Drawing;
 using System.Linq;
-using ImpostorHqR.Extension.Api.Interface;
-using ImpostorHqR.Extension.Api.Interface.Web.Page.Api.Simple;
+using ImpostorHqR.Extension.Api;
+using ImpostorHqR.Extension.Api.Api.Web;
+using ImpostorHqR.Extension.Api.Configuration;
 
 namespace ImpostorHqR.Extension.Graphs.Load.WebPages
 {
-    class WebPageThreads : IExtensionService
+    class WebPageThreads
     {
-        private ISimpleApiPage Page { get; set; }
+        private IApiPage Page { get; set; }
+
+        private string Indent = "\t\t\t\t";
 
         private void Tick(object sender, System.Timers.ElapsedEventArgs e)
         {
@@ -17,44 +20,26 @@ namespace ImpostorHqR.Extension.Graphs.Load.WebPages
 
         private string GetRecords()
         {
-            var rsb = Proxy.Instance.PreInitialization.StringBuilderPool.Get();
-            var sb = rsb.StringBuilder;
+            using var sb = IReusableStringBuilder.Get();
             sb.AppendLine($"It is {DateTime.Now}<br>");
-            lock (ThreadMonitor.Instance.Results)
+            
+            foreach (var instanceResult in ThreadMonitor.Results.OrderByDescending(i => i.Value))
             {
-                foreach (var instanceResult in ThreadMonitor.Instance.Results.OrderByDescending(i => i.Value))
-                {
-                    sb.Append($"Thread ID: {instanceResult.Key} : {GetSpaces(instanceResult.Key)}{instanceResult.Value}%<br>");
-                }
+                sb.Append($"Thread ID: {instanceResult.Key} : {Indent}{instanceResult.Value}%<br>");
             }
-
+            
             var result = sb.ToString();
-            Proxy.Instance.PreInitialization.StringBuilderPool.Return(rsb);
-
             return result;
         }
 
-        private string GetSpaces(int id)
+        public void Start()
         {
-            return new string(' ', 10 - id.ToString().Length);
-        }
+            if (!IConfigurationStore.GetByType<WebPageConfig>().EnableThreadPage) return;
 
-        public void Init()
-        {
-            if (!WebPageConfig.Instance.EnableThreadPage) return;
-
-            this.Page = Proxy.Instance.PreInitialization.PageProvider.SimpleApiPageProvider.ProduceApiPage("Thread CPU Usage", Color.Aqua, WebPageConfig.Instance.ThreadPageHandle);
+            this.Page = IApiPage.Create("Thread CPU Usage", Color.Aqua, IConfigurationStore.GetByType<WebPageConfig>().ThreadPageHandle);
             var tmr = new System.Timers.Timer(1000) { AutoReset = true };
             tmr.Elapsed += Tick;
             tmr.Start();
-        }
-
-        public void PostInit()
-        {
-        }
-
-        public void Shutdown()
-        {
         }
     }
 }

@@ -1,14 +1,18 @@
 ﻿using System;
+using System.Buffers;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
-using ImpostorHqR.Core.ObjectPool.Pools.StringBuilder;
 using ImpostorHqR.Core.Web.Http.Server.Response.Fields;
+using ImpostorHqR.Extension.Api;
 
 namespace ImpostorHqR.Core.Web.Http.Server.Response
 {
-    public readonly struct HttpResponseHeaders : IDisposable
+    public struct HttpResponseHeaders : IDisposable
     {
-        public int ContentLength { get; }
+        public static readonly ArrayPool<byte> BytePoolShared = ArrayPool<byte>.Shared;
+
+        public long ContentLength { get; }
 
         public IResponseField[] Fields { get; }
 
@@ -16,18 +20,24 @@ namespace ImpostorHqR.Core.Web.Http.Server.Response
 
         public ResponseStatusCode Status { get; }
 
-        public HttpResponseHeaders(int contentLength, ResponseStatusCode code, IResponseField[] fields, string version)
+        public byte[] Buffer { get; private set; }
+
+        public HttpResponseHeaders(long contentLength, ResponseStatusCode code, IResponseField[] fields, string version)
         {
             this.ContentLength = contentLength;
             this.Status = code;
             this.HttpVersion = version;
             this.Fields = fields;
+            this.Buffer = null;
         }
-
+        /// <summary>
+        /// WARNING! RETURN BYTES TO THE POOL! (calling dispose)
+        /// </summary>
+        /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public byte[] Compile()
+        public ValueTuple<byte[], int> Compile()
         {
-            using var sb = StringBuilderPool.Instance.Get();
+            using var sb = IReusableStringBuilder.Get();
 
             sb.Append(HttpVersion);
             sb.Append(" ");
@@ -40,12 +50,18 @@ namespace ImpostorHqR.Core.Web.Http.Server.Response
                 sb.Append(responseField.Compile());
                 sb.Append("\r\n");
             }
+            sb.Append("Connection: close");
+            sb.Append("\r\n");
 
             sb.Append(contentLenField.Compile());
             sb.Append("\r\n\r\n");
 
-            var result = Encoding.ASCII.GetBytes(sb.ToString() ?? throw new InvalidOperationException("What happened here? [line 47 of Response.Headers]"));
-            return result;
+            var str = sb.ToString();
+            this.Buffer = BytePoolShared.Rent(str!.Length);
+
+            Encoding.UTF8.GetBytes(str, Buffer.AsSpan(0, str.Length));
+
+            return (Buffer, str.Length);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -64,6 +80,8 @@ namespace ImpostorHqR.Core.Web.Http.Server.Response
 
         public void Dispose()
         {
+            Trace.Assert(Buffer != null, "Http response was disposed before compilation.");
+            BytePoolShared.Return(Buffer);
         }
     }
 }

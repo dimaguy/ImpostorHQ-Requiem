@@ -1,4 +1,5 @@
-﻿using ImpostorHqR.Core.ObjectPool.Pools.StringBuilder;
+﻿
+using ImpostorHqR.Extension.Api;
 
 namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiGraphPage.Splicer
 {
@@ -6,20 +7,18 @@ namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiGraphPage.Splicer
     {
         public static string SpliceFinalHtml(string script, string title, string[] graphNames, byte width)
         {
-            var sb = StringBuilderPool.Pool.Get();
+            using var sb = IReusableStringBuilder.Get();
 
             foreach (var graphName in graphNames)
             {
-                sb.AppendLine();
+                sb.Append("\r\n");
                 sb.AppendLine("<div class=\"chart-container\">");
                 sb.AppendLine($"    <canvas id=\"{graphName}\"></canvas>");
                 sb.AppendLine("</div>");
-                sb.AppendLine();
+                sb.AppendLine("\r\n");
             }
 
             var declarations = sb.ToString();
-
-            StringBuilderPool.Pool.Return(sb);
 
             return GraphPageSplicerConstant.Html
                 .Replace(GraphPageSplicerConstant.ReplaceInScript, script)

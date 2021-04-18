@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using ImpostorHqR.Core.Configuration;
@@ -9,13 +11,14 @@ using ImpostorHqR.Core.Web.Http.Server.Client;
 using ImpostorHqR.Core.Web.Http.Server.Response;
 using ImpostorHqR.Core.Web.Http.Server.Response.Fields;
 using ImpostorHqR.Core.Web.Page.Generator.Api.ApiGraphPage.Splicer;
-using ImpostorHqR.Extension.Api.Interface.Web.Page.Api.Graph;
+using ImpostorHqR.Extension.Api.Api.Web;
+using ImpostorHqR.Extension.Api.Configuration;
 
 namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiGraphPage
 {
     public class ApiGraphPage : IGraphPage
     {
-        private ApiPageElementGraph[] Graphs { get; }
+        private ApiGraph[] Graphs { get; }
 
         public string ApiHandle { get; }
 
@@ -23,11 +26,11 @@ namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiGraphPage
 
         public string Code { get; }
 
-        private byte[] CodeBytes { get; }
-
         private ApiHandleHolder Api { get; }
 
-        public ApiGraphPage(string handle, string title, ApiPageElementGraph[] graphs, byte width)
+        private byte[] Stream { get; }
+
+        public ApiGraphPage(string handle, string title, ApiGraph[] graphs, byte width)
         {
             this.ApiHandle = handle;
             this.Title = title;
@@ -44,44 +47,39 @@ namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiGraphPage
             }
 
             var script = GraphPageSplicer.SpliceMainScript(
-                ConfigHolder.Instance.ApiPort,
+                IConfigurationStore.GetByType<RequiemConfig>().ApiPort,
                 handle,
                 declareVariablesInScript.ToArray(),
                 graphCodeStr.ToArray(),
                 graphCodeHandles.ToArray());
 
             this.Code = GraphPageSplicer.SpliceFinalHtml(script, title, graphCodeHandles.ToArray(), width);
-            this.CodeBytes = Encoding.UTF8.GetBytes(this.Code);
+            using var ms = new MemoryStream();
 
-            var httpHandle = new SpecialHandler(handle, ServePage);
-            HttpHandleStore.Instance.AddHandler(httpHandle);
-
-            this.Api = new ApiHandleHolder(handle);
-            WebApiHandleStore.Instance.Add(this.Api);
-        }
-
-        public void Update()
-        {
-            lock (Graphs)
-            {
-                Api.Push(new ApiGraphPageUpdateMessage(this.Graphs));
-            }
-        }
-
-        private async void ServePage(HttpClientHolder obj)
-        {
-            var headers = new HttpResponseHeaders(this.CodeBytes.Length, ResponseStatusCode.Ok200, new IResponseField[]
+            using var headers = new HttpResponseHeaders(Code.Length, ResponseStatusCode.Ok200, new IResponseField[]
             {
                 new FieldAcceptRanges("bytes"),
                 new FieldContentType("text/html"),
-                new FieldServer(HttpConstant.ServerName + " over " + this.Title)
+                new FieldServer(HttpConstant.ServerName)
             }, "HTTP/1.1");
-
-            await obj.SafeWriteAsync(headers.Compile());
-            await obj.SafeWriteAsync(this.CodeBytes);
+            this.Header = headers.Compile();
+            ms.Write(Header.Item1,0,Header.Item2);
+            ms.Write(Encoding.UTF8.GetBytes(this.Code));
+            this.Stream = ms.ToArray();
+            var httpHandle = new SpecialHandler(handle, async(ctx)=>await ctx.SafeWriteAsync(Stream));
+            HttpHandleStore.AddHandler(httpHandle);
+            this.Api = new ApiHandleHolder(handle);
+            WebApiHandleStore.Add(this.Api);
         }
 
-        IEnumerable<IGraph> IGraphPage.GetGraphs()
+        private (byte[], int) Header { get; }
+
+        public void Update()
+        {
+            Api.Push(new ApiGraphPageUpdateMessage(this.Graphs));
+        }
+
+        public IEnumerable<IGraph> GetGraphs()
         {
             return Graphs.AsEnumerable();
         }

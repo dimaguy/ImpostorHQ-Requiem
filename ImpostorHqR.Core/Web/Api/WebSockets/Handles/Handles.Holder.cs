@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ImpostorHqR.Core.Logging;
+using ImpostorHqR.Extension.Api;
 
 namespace ImpostorHqR.Core.Web.Api.WebSockets.Handles
 {
@@ -39,7 +40,7 @@ namespace ImpostorHqR.Core.Web.Api.WebSockets.Handles
             {
                 if (!ClientCanSend)
                 {
-                    ConsoleLogging.Instance.LogInformation($"Client {client.Connection.ConnectionInfo.ClientIpAddress} tried to send data on handle that does not support sending [{HandleId}].", true);
+                    ILogManager.Log($"Client {client.Connection.ConnectionInfo.ClientIpAddress} tried to send data on handle that does not support sending [{HandleId}].", $"Handles.Holder - {user.Connection.ConnectionInfo.ClientIpAddress}", LogType.Warning);
                     return;
                 }
                 OnMessage?.Invoke(client, str);
@@ -50,26 +51,19 @@ namespace ImpostorHqR.Core.Web.Api.WebSockets.Handles
 
         public void Push(IHqApiOutgoingMessage message)
         {
-            List<HqApiUser> targets = null;
             lock (Users)
             {
                 if (Users.Count == 0) return;
-                targets = new List<HqApiUser>();
-                targets.AddRange(Users.Where(user => user.Connected));
-            }
-            if (targets.Count == 0) return;
 
-            var data = message.Serialize();
-            if (Password != null)
-            {
-                // encrypt tea
+                var targets = Users.Where(user => user.Connected);
+                var data = message.Serialize();
+                if (Password != null)
+                {
+                    // encrypt tea
+                }
+                
+                foreach (var hqApiUser in targets) _ = hqApiUser.Send(data);
             }
-
-            //foreach (var hqApiUser in targets) await hqApiUser.Send(data);
-            Parallel.ForEach(targets, async (item) =>
-            {
-                await item.Send(data);
-            });
         }
 
         public async Task PushTo(HqApiUser user, IHqApiOutgoingMessage message)

@@ -11,19 +11,18 @@ namespace ImpostorHqR.Extension.Graphs.Events
     {
         public static readonly BenchmarkEventListener Instance = new BenchmarkEventListener();
 
-        public static readonly object syncRoot = new object();
+        public static readonly object SyncRoot = new object();
 
         public BenchmarkEventListener()
         {
-            var tmr = new System.Timers.Timer(1000);
-            tmr.AutoReset = true;
+            var tmr = new System.Timers.Timer(1000) {AutoReset = true};
             tmr.Elapsed += Tick;
             tmr.Start();
         }
 
         private void Tick(object sender, ElapsedEventArgs e)
         {
-            lock (syncRoot)
+            lock (SyncRoot)
             {
                 #region Assign
 
@@ -178,9 +177,9 @@ namespace ImpostorHqR.Extension.Graphs.Events
         }
 
         [EventListener]
-        public void OnPlayerChat(IPlayerChatEvent evt)
+        public async void OnPlayerChat(IPlayerChatEvent evt)
         {
-            ConsoleWebPage.Updates.Writer.TryWrite($"[{evt.Game.Code.Code}] {evt.ClientPlayer.Character?.PlayerInfo.PlayerName}: \"{evt.Message}\"");
+            await ConsoleWebPage.Updates.Writer.WriteAsync($"[{evt.Game.Code.Code}] {evt.ClientPlayer.Character?.PlayerInfo.PlayerName}: \"{evt.Message}\"");
             Interlocked.Increment(ref OnPlayerChatCount);
         }
 

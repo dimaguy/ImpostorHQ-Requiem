@@ -1,22 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using ImpostorHqR.Extensions.Api.Interface.Game;
+using System.Windows.Input;
+using Impostor.Api.Net;
+using ImpostorHqR.Extension.Api.Api.Player;
 
 namespace ImpostorHqR.Core.Command.Processor
 {
-    public class Command : ICommand, Extensions.Api.Interface.Game.ICommand
+    public class PlayerCommand : IPlayerCommand
     {
         public CommandData Data { get; private set; }
 
         public string Help => Data.Help;
 
-        public Action<object, string[]> CommandSuccessEvent { get; private set; }
+        public Action<IClientPlayer, string[]> CommandSuccessEvent { get; private set; }
 
-        public Action<object> CommandInvalidSyntaxEvent { get; private set; }
+        public Action<IClientPlayer> CommandInvalidSyntaxEvent { get; private set; }
 
-
-        public Command(CommandData data, Action<object, string[]> commandInvoked, Action<object> invalidSyntax)
+        public PlayerCommand(CommandData data, Action<IClientPlayer, string[]> commandInvoked, Action<IClientPlayer> invalidSyntax)
         {
             data.Prefix = data.Prefix.Trim();
 
@@ -33,9 +34,11 @@ namespace ImpostorHqR.Core.Command.Processor
             this.Data = data;
             this.CommandSuccessEvent = commandInvoked;
             this.CommandInvalidSyntaxEvent = invalidSyntax;
+
+            CommandProcessor.RegisterGameCommand(this);
         }
 
-        public void Process(object client, string commandData)
+        public void Process(IClientPlayer client, string commandData)
         {
             if (!Data.HasData)
             {

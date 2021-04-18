@@ -1,10 +1,10 @@
 ﻿using System.Drawing;
 using ImpostorHqR.Core.Web.Page.Generator.Api.ApiGraphPage.Splicer;
-using ImpostorHqR.Extension.Api.Interface.Web.Page.Api.Graph;
+using ImpostorHqR.Extension.Api.Api.Web;
 
 namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiGraphPage
 {
-    public class ApiPageElementGraph : IGraph
+    public class ApiGraph : IGraph
     {
         private static int _varIndex = 0;
 
@@ -28,7 +28,7 @@ namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiGraphPage
 
         public uint Delay { get; }
 
-        public ApiPageElementGraph(string title, Color backgroundColor, Color borderColor, uint delay, uint span)
+        public ApiGraph(string title, Color backgroundColor, Color borderColor, uint delay, uint span)
         {
             this.Name = title;
             this.TimeSpan = span;

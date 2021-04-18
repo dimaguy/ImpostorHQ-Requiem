@@ -16,8 +16,11 @@
 
   <ItemGroup>
     <Compile Remove="Server.Test\**" />
+    <Compile Remove="Web\Page\Generator\Api\ApiConsolePageWithSend\**" />
     <EmbeddedResource Remove="Server.Test\**" />
+    <EmbeddedResource Remove="Web\Page\Generator\Api\ApiConsolePageWithSend\**" />
     <None Remove="Server.Test\**" />
+    <None Remove="Web\Page\Generator\Api\ApiConsolePageWithSend\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -26,8 +29,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Extension\Helper\" />
+    <Folder Include="ObjectPool\" />
     <Folder Include="Web\Api\WebSockets\" />
-    <Folder Include="Web\Page\Generator\Api\ApiConsolePageWithSend\" />
   </ItemGroup>
 
   <ItemGroup>

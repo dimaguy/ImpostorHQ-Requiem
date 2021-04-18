@@ -1,87 +1,71 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Timers;
 using ImpostorHqR.Core.Configuration;
 using ImpostorHqR.Core.Logging;
+using ImpostorHqR.Extension.Api;
+using ImpostorHqR.Extension.Api.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace ImpostorHqR.Core.Web.Common.Protection.DoS
 {
-    public class HqServerProtector
+    public static class HqServerProtector
     {
-        public static readonly HqServerProtector Instance = new HqServerProtector();
+        private static readonly ConcurrentDictionary<IPAddress, int> Connections;
+        private static readonly ConcurrentDictionary<IPAddress, byte> Blocked;
+        private static readonly int Rate;
 
-        private readonly List<ServerAccessingEntity> Blocked = new List<ServerAccessingEntity>();
-
-        private readonly List<ServerAccessingEntity> Lookout = new List<ServerAccessingEntity>();
-
-        public HqServerProtector()
+        static HqServerProtector()
         {
-            var clock = new System.Timers.Timer(10000);
-            clock.Elapsed += Tick;
-            clock.AutoReset = true;
-            clock.Start();
+            Connections = new ConcurrentDictionary<IPAddress, int>();
+            Blocked = new ConcurrentDictionary<IPAddress, byte>();
+
+            Rate = IConfigurationStore.GetByType<RequiemConfig>().RequestRatePerMinuteToBlock;
+
+            var tmr = new System.Timers.Timer(1000) {AutoReset = true};
+            tmr.Elapsed += Tick;
+            tmr.Start();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool IsAttacking(IPAddress address)
+        private static void Tick(object sender, ElapsedEventArgs e)
         {
-            lock (Blocked)
+            try
             {
-                if (Blocked.FirstOrDefault(item => item.Address.Equals(address)) != null) return true;
-            }
-
-            lock (Lookout)
-            {
-                var item = Lookout.FirstOrDefault(item => item.Address.Equals(address));
-                if (item != null) Interlocked.Increment(ref item.Requests);
-                else
+                foreach (var connection in Connections)
                 {
-                    item = new ServerAccessingEntity(address);
-                    Lookout.Add(item);
+                    var count = connection.Value - 1;
+                    if (count > 0) Connections.TryUpdate(connection.Key, count, connection.Value);
+                    else Connections.TryRemove(connection);
                 }
             }
+            catch (Exception ex)
+            {
+                ILogManager.Log($"Rate limit error.", "Rate limiter.", LogType.Error, ex:ex);
+            }
+        }
 
+        public static bool IsAttacking(IPAddress address)
+        {
+            if (Connections.TryGetValue(address, out var value) && value >= Rate)
+            {
+                if (!Blocked.ContainsKey(address))
+                {
+                    Blocked.TryAdd(address, 0);
+                    OnBlocked?.Invoke(address);
+                }
+
+                return true;
+            }
+
+            Connections.AddOrUpdate(address, _ => 1, (_, i) => i + 1);
             return false;
         }
 
-        private void Tick(object sender, System.Timers.ElapsedEventArgs e)
-        {
-            lock (Blocked)
-            {
-                for (int i = 0; i < Blocked.Count; i++)
-                {
-                    var entity = Blocked[i];
-                    if ((DateTime.Now - entity.TimeLastAccess).Minutes <
-                        ConfigHolder.Instance.UnblockAfterMinutes) continue;
-                    Blocked.Remove(entity);
-                    entity.Dispose();
-                }
-            }
-
-            lock (Lookout)
-            {
-                for (int i = 0; i < Lookout.Count; i++)
-                {
-                    var entity = Lookout[i];
-                    if (entity.Requests > ConfigHolder.Instance.RequestRatePerMinuteToBlock * 6)
-                    {
-                        Lookout.Remove(entity);
-                        lock (Blocked) Blocked.Add(entity);
-                        entity.TimeLastAccess = DateTime.Now;
-                        OnBlocked?.Invoke(entity.Address);
-                        ConsoleLogging.Instance.LogInformation($"Blocked {entity.Address} at {DateTime.Now} for {ConfigHolder.Instance.UnblockAfterMinutes} minutes.");
-                    }
-                    else
-                    {
-                        Lookout.Remove(entity);
-                    }
-                }
-            }
-        }
-
-        public event Action<IPAddress> OnBlocked;
+        public static event Action<IPAddress> OnBlocked;
     }
 }

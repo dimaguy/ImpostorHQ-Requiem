@@ -1,40 +1,32 @@
 ﻿using Fleck;
 using ImpostorHqR.Core.Configuration;
 using ImpostorHqR.Core.Logging;
-using ImpostorHqR.Core.Services;
+using ImpostorHqR.Extension.Api;
+using ImpostorHqR.Extension.Api.Configuration;
 
 namespace ImpostorHqR.Core.Web.Api.WebSockets
 {
-    public class HqApiListener : IService
+    public static class WebApiListener
     {
-        public static HqApiListener Instance;
+        public static WebSocketServer Listener { get; private set; }
 
-        public WebSocketServer Listener { get; private set; }
+        public static bool Running { get; private set; }
 
-        public bool Running { get; private set; }
-
-        public HqApiListener()
+        public static void Start()
         {
-            Instance = this;
-        }
-
-        public void PostInit()
-        {
-            this.Running = true;
-            var location = $"ws://0.0.0.0:{ConfigHolder.Instance.ApiPort}";
-            ConsoleLogging.Instance.LogInformation($"Starting API server at: {location}", true);
-            this.Listener = new WebSocketServer(location);
-            this.Listener.Start(socket =>
+            Running = true;
+            var location = $"ws://0.0.0.0:{IConfigurationStore.GetByType<RequiemConfig>().ApiPort}";
+            Listener = new WebSocketServer(location);
+            Listener.Start(socket =>
             {
-                socket.OnOpen += () => HqApiProcessor.Instance.Process(socket);
+                socket.OnOpen += () => HqApiProcessor.Process(socket);
             });
         }
 
-        public void Shutdown()
+        public static void Shutdown()
         {
-            this.Running = false;
+            Running = false;
+            Listener.Dispose();
         }
-
-        public void Activate() { }
     }
 }

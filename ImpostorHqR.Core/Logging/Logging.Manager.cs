@@ -1,113 +1,129 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Globalization;
+﻿#nullable enable
+using System;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using ImpostorHqR.Core.Configuration;
-using ImpostorHqR.Core.Services;
-using ImpostorHqR.Extension.Api.Interface.Logging;
-using ImpostorHqR.Extensions.Api.Interface.Logging;
+using ImpostorHqR.Extension.Api;
+using Microsoft.Extensions.Logging;
 
 namespace ImpostorHqR.Core.Logging
 {
-    public class LogManager : IService, ILogManager
+    public static class LoggingManager
     {
-        public static LogManager Instance;
+        private static StreamWriter Writer;
+        private static int _QueueSize = 0;
+        private static readonly Channel<(string Message, string Source, LogType, bool UseFile, bool UseConsole, Exception? ex)> Queue =
+            Channel.CreateUnbounded<(string Message, string Source, LogType, bool UseFile, bool UseConsole, Exception? ex) >(new UnboundedChannelOptions()
+            {
+                SingleReader = true,
+                SingleWriter = false,
+            });
 
-        private const int FsBufferSize = 1024;
-
-        private static FileStream Stream;
-
-        private readonly Channel<LogEntry> Queue = Channel.CreateUnbounded<LogEntry>(new UnboundedChannelOptions()
-        { SingleReader = true, SingleWriter = false });
-
-        public LogManager()
+        public static void Initialize()
         {
-            if (Instance != null) return;
-            Instance = this;
-            Task.Factory.StartNew(LogTask, TaskCreationOptions.LongRunning);
+            const BindingFlags flags = BindingFlags.NonPublic | BindingFlags.Static;
+
+            typeof(ILogManager).GetField("_Logger", flags)!.SetValue(null, new Action<(string, string, LogType, bool, bool, Exception?)>(
+                async (item) =>
+                {
+                    var (message, source, logType, toFile, toConsole, exception) = item;
+                    await LogAsync(message, source, logType, toFile, toConsole, exception);
+                }));
+            typeof(ILogManager).GetField("_GetQueueSize", flags)!.SetValue(null, new Func<int>(()=>_QueueSize));
+
+            Task.Factory.StartNew(Consumer, TaskCreationOptions.LongRunning);
         }
 
-        public ValueTask Log(LogEntry entry) => Queue.Writer.WriteAsync(entry);
-
-        private async Task LogTask()
+        public static ValueTask LogAsync(string message, string? source, LogType type, bool writeToFile = false, bool writeToConsole = true, Exception? ex = null)
         {
-            var fileName = Path.Combine(ConfigHolder.Instance.LogPath, DateTime.Now.ToShortDateString().Replace('/', '.'));
-            var sb = new StringBuilder();
-            var path = ConfigHolder.Instance.LogAsCsv ? $"{fileName}.csv" : $"{fileName}.log";
-            var encodingBuffer = new byte[FsBufferSize * 4];
-
-            new FileInfo(path).Directory?.Create();
-
-            // will not use an async file stream because the performance would be affected unless a large buffer size is used.
-            // if a large buffer size is used, logs will be lost on force shutdown.
-            await using var fs = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Read, FsBufferSize, useAsync: false);
-
-            Stream = fs;
-
-            await foreach (var entry in Queue.Reader.ReadAllAsync())
+            if (!writeToConsole && !writeToFile)
             {
-                if (string.IsNullOrEmpty(entry.Message)) throw new Exception("Programmer error: log entry has a null message.");
-                var sourceName = entry.Source == null ? "[source not specified]" : ConfigHolder.Instance.LogAsCsv ? entry.Source.ToString() + "," : $"[{entry.Source}] ";
+                return default;
+            }
 
-                sb.Clear();
-                if (ConfigHolder.Instance.LogAsCsv)
+            Interlocked.Increment(ref _QueueSize);
+            source ??= Assembly.GetCallingAssembly().GetName().Name;
+            return Queue.Writer.WriteAsync((message, source, type, writeToFile, writeToConsole, ex));
+        }
+
+        private static async Task Consumer()
+        {
+            var path = $"ImpostorHqR.Logs/{DateTime.Now.ToString("u").Replace(":",".")}.log.csv";
+            var fi = new FileInfo(path);
+            fi.Directory?.Create();
+            await using var fs = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Read);
+            Writer = new StreamWriter(fs, Encoding.UTF8);
+            await foreach (var log in Queue.Reader.ReadAllAsync())
+            {
+                var (message, source, type, file, console, ex) = log;
+                
+                if (file)
                 {
-                    sb.Append(DateTime.Now.ToString(CultureInfo.InvariantCulture) + ',');
-                    sb.Append(sourceName + ',');
-                    sb.Append(entry.Type.ToString() + ',');
-                    sb.Append(entry.Message);
-                    sb.AppendLine();
+                    using var sb = IReusableStringBuilder.Get();
+                    sb.Append(DateTime.Now.ToString());
+                    sb.Append(',');
+                    sb.Append(type.ToString());
+                    sb.Append(',');
+                    sb.Append(source);
+                    sb.Append(',');
+                    sb.Append(message);
+                    if (ex != null)
+                    {
+                        sb.Append(',');
+                        var exStr = ex.ToString();
+                        ReplaceNewLineVeryUnsafe(ref exStr);
+                        sb.Append(exStr);
+                    }
+                    sb.Append("\r\n");
+                    await Writer.WriteAsync(sb.StringBuilder);
                 }
-                else
+                if (console)
                 {
-                    sb.Append(DateTime.Now.ToString(CultureInfo.InvariantCulture) + " | ");
-                    sb.Append(sourceName + " - ");
-                    sb.Append(entry.Type + ": \"");
-                    sb.Append(entry.Message + "\"");
-                    sb.AppendLine();
+                    var logger = ImpostorHqR.Extension.Api.Registry.Impostor.Logger;
+                    switch (type)
+                    {
+                        case LogType.Debug:
+                            logger.LogDebug($"Requiem Debug from \"{source}\": {message}");
+                            break;
+                        case LogType.Information:
+                            logger.LogInformation($"Requiem Information from \"{source}\": {message}");
+                            break;
+                        case LogType.Error:
+                            logger.LogError($"Requiem ERROR in \"{source}\": {message}");
+                            break;
+                        case LogType.Warning:
+                            logger.LogWarning($"Requiem WARNING in \"{source}\": {message}");
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
                 }
 
-                var data = sb.ToString().AsMemory();
-                var offset = 0;
-                for (var i = 0; i < data.Length / encodingBuffer.Length + (data.Length % encodingBuffer.Length == 0 ? 0 : 1); i++)
+                Interlocked.Decrement(ref _QueueSize);
+            }
+
+            // !!!! NEVER USE THIS ANYWHERE ELSE !!!!
+            static unsafe void ReplaceNewLineVeryUnsafe(ref string str)
+            {
+                fixed (char* ptr = &str.GetPinnableReference())
                 {
-                    var left = Math.Min(encodingBuffer.Length, data.Length - offset);
-                    Encoding.UTF8.GetBytes(data.Span.Slice(offset, left), encodingBuffer);
-                    offset += left;
-                    fs.Write(encodingBuffer, 0, left);
+                    for (var i = 0; i < str.Length; i++)
+                    {
+                        if (ptr[i] == '\r' || ptr[i] == '\n') ptr[i] = '|';
+                    }
                 }
             }
         }
 
-        public void Shutdown()
+        
+
+        public static void Shutdown()
         {
-            Log(new LogEntry()
-            {
-                Message = "Requiem Shutting down.",
-                Source = this,
-                Type = LogType.Information
-            });
-
-            Stream.Flush(true);
-
             Queue.Writer.Complete();
+            Writer.Flush();
         }
-
-        public void PostInit()
-        {
-            if (!Directory.Exists(ConfigHolder.Instance.LogPath)) Directory.CreateDirectory(ConfigHolder.Instance.LogPath);
-            Log(new LogEntry()
-            {
-                Message = "Requiem Starting.",
-                Source = this,
-                Type = LogType.Information
-            });
-        }
-
-        public void Activate() { }
     }
 }

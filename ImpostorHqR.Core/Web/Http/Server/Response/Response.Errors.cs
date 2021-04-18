@@ -15,26 +15,26 @@ namespace ImpostorHqR.Core.Web.Http.Server.Response
         public HttpErrorResponses()
         {
             using var notFoundDocument = new MemoryStream();
-            var notFoundHeader = new HttpResponseHeaders(HttpConstant.NotFound404Message.Length, ResponseStatusCode.FileNotFound404, new IResponseField[]
+            using var notFoundHeader = new HttpResponseHeaders(HttpConstant.NotFound404Message.Length, ResponseStatusCode.FileNotFound404, new IResponseField[]
             {
                 new FieldServer(HttpConstant.ServerName),
                 new FieldAcceptRanges(HttpConstant.AcceptRanges),
                 new FieldContentType("text/html")
             }, "HTTP/1.1");
-
-            notFoundDocument.Write(notFoundHeader.Compile());
+            var nfh = notFoundHeader.Compile();
+            notFoundDocument.Write(nfh.Item1,0,nfh.Item2);
             notFoundDocument.Write(Encoding.UTF8.GetBytes(HttpConstant.NotFound404Message));
             this.NotFoundResponse = notFoundDocument.ToArray();
 
             using var notImplementedDocument = new MemoryStream();
-            var notImplementedHeader = new HttpResponseHeaders(HttpConstant.NotImplemented501.Length, ResponseStatusCode.NotImplemented501, new IResponseField[]
+            using var notImplementedHeader = new HttpResponseHeaders(HttpConstant.NotImplemented501.Length, ResponseStatusCode.NotImplemented501, new IResponseField[]
             {
                 new FieldServer(HttpConstant.ServerName),
                 new FieldAcceptRanges(HttpConstant.AcceptRanges),
                 new FieldContentType("text/html")
             }, "HTTP/1.1");
-
-            notImplementedDocument.Write(notImplementedHeader.Compile());
+            var nid = notImplementedHeader.Compile();
+            notImplementedDocument.Write(nid.Item1,0,nid.Item2);
             notImplementedDocument.Write(Encoding.UTF8.GetBytes(HttpConstant.NotImplemented501));
             this.NotImplementedResponse = notImplementedDocument.ToArray();
         }

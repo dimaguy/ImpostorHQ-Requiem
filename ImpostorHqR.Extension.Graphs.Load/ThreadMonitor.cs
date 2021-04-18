@@ -1,29 +1,35 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
+using ImpostorHqR.Extension.Api;
+using ImpostorHqR.Extension.Api.Configuration;
+using ImpostorHqR.Extension.Graphs.Load.WebPages;
 using ThreadState = System.Diagnostics.ThreadState;
 
 namespace ImpostorHqR.Extension.Graphs.Load
 {
-    public class ThreadMonitor
+    public static class ThreadMonitor
     {
-        public static readonly ThreadMonitor Instance = new ThreadMonitor();
+        public static readonly ConcurrentDictionary<int, int> Results = new ConcurrentDictionary<int, int>();
 
-        public Dictionary<int, int> Results = new Dictionary<int, int>();
+        private static readonly Process CurrentProcess = Process.GetCurrentProcess();
 
-        public ThreadMonitor()
+        static ThreadMonitor()
         {
-            var t = new Thread(Callback);
-            t.Start();
+            Trace.Assert(IConfigurationStore.GetByType<WebPageConfig>().EnableThreadPage, "THREAD MONITOR STARTED BY ITSELF!");
+            _ = Callback();
         }
 
-        private void Callback()
+        private static async Task Callback()
         {
-            List<ThreadItem> records = new List<ThreadItem>();
+            var records = new List<ThreadItem>();
             while (true)
             {
-                foreach (ProcessThread processThread in Process.GetCurrentProcess().Threads)
+                CurrentProcess.Refresh();
+                foreach (ProcessThread processThread in CurrentProcess.Threads)
                 {
                     try
                     {
@@ -39,10 +45,11 @@ namespace ImpostorHqR.Extension.Graphs.Load
                     }
                     catch
                     {
+                        // ignored
                     }
                 }
 
-                Thread.Sleep(500);
+                await Task.Delay(500);
 
                 foreach (var threadItem in records)
                 {
@@ -63,7 +70,7 @@ namespace ImpostorHqR.Extension.Graphs.Load
                             }
                             else
                             {
-                                Results.Add(threadItem.Thread.Id, usage);
+                                Results.TryAdd(threadItem.Thread.Id, usage);
                             }
                         }
                         threadItem.Thread.Dispose();

@@ -4,12 +4,8 @@ using System;
 
 namespace ImpostorHqR.Core.Impostor.Events
 {
-    class ImpostorPlayerEventListener : IEventListener
+    public class ImpostorPlayerEventListener : IEventListener
     {
-        public static ImpostorPlayerEventListener Instance;
-
-        public ImpostorPlayerEventListener() => Instance = this;
-
         #region Player Events
 
         [EventListener]

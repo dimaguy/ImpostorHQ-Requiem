@@ -1,11 +1,10 @@
 ﻿using System.Drawing;
 using System.Text.Json;
 using ImpostorHqR.Core.Web.Api.WebSockets;
-using ImpostorHqR.Extension.Api.Interface.Web.Page.Api.Simple;
 
 namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiTablePage
 {
-    public class SimpleApiPageElement : IHqApiOutgoingMessage, ISimpleApiPageElement
+    public readonly struct SimpleApiPageElement : IHqApiOutgoingMessage
     {
         public string Message { get; }
 
@@ -16,16 +15,10 @@ namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiTablePage
         public SimpleApiPageElement(string message, Color? color)
         {
             this.Message = message;
-            if (Color != null)
-            {
-                this.BackgroundColor = (Color)color;
-                this.Color = $"rgb({color?.R}, {color?.G}, {color?.B})";
-            }
+            this.BackgroundColor = color ?? System.Drawing.Color.Transparent;
+            this.Color = $"rgb({BackgroundColor.R}, {BackgroundColor.G}, {BackgroundColor.B})";
         }
 
-        public string Serialize()
-        {
-            return JsonSerializer.Serialize(this);
-        }
+        public string Serialize() => JsonSerializer.Serialize(this);
     }
 }

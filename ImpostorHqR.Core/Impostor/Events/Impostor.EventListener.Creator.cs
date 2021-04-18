@@ -1,19 +1,18 @@
-﻿using ImpostorHqR.Core.Services;
+﻿
+using ImpostorHqR.Extension.Api.Service;
 
 namespace ImpostorHqR.Core.Impostor.Events
 {
-    public class ImpostorEventListenerCreator : IService
+    public static class ImpostorEventListenerCreator
     {
-        public void Activate()
+        public static void Initialize()
         {
             var playerEventListener = new ImpostorPlayerEventListener();
             var gameEventListener = new ImpostorGameEventListener();
-            ImpostorObjectHolder.Instance.ImpostorEventManager.RegisterListener(playerEventListener);
-            ImpostorObjectHolder.Instance.ImpostorEventManager.RegisterListener(gameEventListener);
+            ImpostorHqR.Extension.Api.Registry.Impostor.EventManager.RegisterListener(playerEventListener);
+            ImpostorHqR.Extension.Api.Registry.Impostor.EventManager.RegisterListener(gameEventListener);
+            IServiceManager.RegisterSingleton(playerEventListener);
+            IServiceManager.RegisterSingleton(gameEventListener);
         }
-
-        public void Shutdown() { }
-
-        public void PostInit() { }
     }
 }

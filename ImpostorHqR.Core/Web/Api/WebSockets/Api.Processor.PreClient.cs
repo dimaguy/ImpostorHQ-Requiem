@@ -4,7 +4,7 @@ using ImpostorHqR.Core.Web.Api.WebSockets.Handles;
 
 namespace ImpostorHqR.Core.Web.Api.WebSockets
 {
-    public class HqApiPreClient
+    public struct HqApiPreClient
     {
         public HqApiUser User { get; set; }
 
