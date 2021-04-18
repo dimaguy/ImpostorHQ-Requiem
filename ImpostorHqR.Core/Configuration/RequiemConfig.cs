@@ -39,5 +39,7 @@ namespace ImpostorHqR.Core.Configuration
         public ushort HttpFileCacheTimeoutSeconds { get; set; } = ushort.MaxValue;  // no updating files.
 
         public string[] HttpCacheExclude { get; set; } = new string[]{/* no files excluded */};
+
+        public int ApiAuthTimeoutSeconds { get; set; } = 5;
     }
 }

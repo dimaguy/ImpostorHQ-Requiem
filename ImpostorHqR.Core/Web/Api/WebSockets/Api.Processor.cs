@@ -1,19 +1,27 @@
 ﻿using Fleck;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Net;
+using ImpostorHqR.Core.Configuration;
+using ImpostorHqR.Core.Configuration.Loader;
 using ImpostorHqR.Core.Logging;
 using ImpostorHqR.Core.Web.Api.WebSockets.Auth;
 using ImpostorHqR.Core.Web.Api.WebSockets.Auth.Responses;
 using ImpostorHqR.Core.Web.Api.WebSockets.Handles;
+using ImpostorHqR.Core.Web.Http.Server.Client;
 using ImpostorHqR.Extension.Api;
+using ImpostorHqR.Extension.Api.Configuration;
 
 namespace ImpostorHqR.Core.Web.Api.WebSockets
 {
     public static class HqApiProcessor
     {
-        private static readonly List<HqApiPreClient> _timeoutQueue = new List<HqApiPreClient>();
+        private static readonly List<HqApiPreClient> TimeoutQueue = new List<HqApiPreClient>();
 
-        static HqApiProcessor()
+        private static readonly RequiemConfig Cfg = IConfigurationStore.GetByType<RequiemConfig>();
+
+        public static void Initialize()
         {
             var tmr = new System.Timers.Timer(1000)
             {
@@ -26,19 +34,19 @@ namespace ImpostorHqR.Core.Web.Api.WebSockets
 
         private static void RemoveCallback(object sender, System.Timers.ElapsedEventArgs e)
         {
-            lock (_timeoutQueue)
+            lock (TimeoutQueue)
             {
-                if (_timeoutQueue.Count > 0)
+                if (TimeoutQueue.Count > 0)
                 {
-                    for (var i = 0; i < _timeoutQueue.Count; i++)
+                    for (var i = 0; i < TimeoutQueue.Count; i++)
                     {
-                        var client = _timeoutQueue[i];
-                        if (client.Cycles < HqApiProcessorConstant.AuthTimeoutSeconds) client.Cycles++;
+                        var client = TimeoutQueue[i];
+                        if (client.Cycles < Cfg.ApiAuthTimeoutSeconds) client.Cycles++;
                         else
                         {
                             client.TimedOut = true;
                             client.Connection.Close();
-                            _timeoutQueue.RemoveAt(i);
+                            TimeoutQueue.RemoveAt(i);
 
                             ILogManager.Log($"Client {client.Connection.ConnectionInfo.ClientIpAddress} timed out on authentication.", "Api.Processor", LogType.Warning);
                         }
@@ -56,7 +64,7 @@ namespace ImpostorHqR.Core.Web.Api.WebSockets
                 TimedOut = false,
                 Stage = AuthStage.NegotiateHandle
             };
-            lock (_timeoutQueue) _timeoutQueue.Add(record);
+            lock (TimeoutQueue) TimeoutQueue.Add(record);
             client.OnMessage += (message) => OnMessage(message, record);
         }
 
@@ -64,7 +72,7 @@ namespace ImpostorHqR.Core.Web.Api.WebSockets
         {
             if (client.Stage != AuthStage.Authenticated)
             {
-                lock (_timeoutQueue)
+                lock (TimeoutQueue)
                 {
                     if (!client.TimedOut)
                     {
@@ -118,6 +126,16 @@ namespace ImpostorHqR.Core.Web.Api.WebSockets
             }
             else
             {
+                //get socket from fleck...
+                var socket = ((SocketWrapper) (((WebSocketConnection) client.Connection).Socket))._socket;
+                Trace.Assert(socket.RemoteEndPoint != null, "Socket remote end point null after fleck cast!");
+                if (!HttpClientProcessor.IsAuthorized(handle.HandleId, ((IPEndPoint)socket.RemoteEndPoint).Address.MapToIPv6()))
+                {
+                    Remove(client, false);
+                    client.Push(new UnauthorizedResponse());
+                    return;
+                }
+
                 Remove(client, false);
                 client.Push(new WelcomeResponse());
                 client.Handle = handle;
@@ -129,9 +147,9 @@ namespace ImpostorHqR.Core.Web.Api.WebSockets
 
             static void Remove(HqApiPreClient client, bool fail)
             {
-                lock (_timeoutQueue)
+                lock (TimeoutQueue)
                 {
-                    if (_timeoutQueue.Contains(client)) _timeoutQueue.Remove(client);
+                    if (TimeoutQueue.Contains(client)) TimeoutQueue.Remove(client);
                     if (fail) client.Connection.Close();
                 }
             }

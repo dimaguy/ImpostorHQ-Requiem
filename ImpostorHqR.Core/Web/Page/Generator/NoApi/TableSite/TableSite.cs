@@ -1,7 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Text;
 using ImpostorHqR.Core.Logging;
+using ImpostorHqR.Core.Web.Http.Handler;
+using ImpostorHqR.Core.Web.Http.Server;
+using ImpostorHqR.Core.Web.Http.Server.Response;
+using ImpostorHqR.Core.Web.Http.Server.Response.Fields;
 using ImpostorHqR.Extension.Api;
 using ImpostorHqR.Extension.Api.Api.Web;
 
@@ -35,12 +40,49 @@ namespace ImpostorHqR.Core.Web.Page.Generator.NoApi.TableSite
             }
         }
 
-        public TableSite(Color color, string title)
+        public TableSite(Color color, string title, string handle, WebPageAuthenticationOption? creds = null)
         {
             this.StartHtmlOriginal = TableSiteConstant.StartHtml;
             this.SetParameters(color, title);
             this.EndHtml = TableSiteConstant.EndHtml;
             this.Update = true;
+            if (creds == null)
+            {
+                var handler = new SpecialHandler(handle, async (ctx) =>
+                {
+                    var data = Encoding.UTF8.GetBytes(GetLatest());
+                    using var headers = new HttpResponseHeaders(data.Length, ResponseStatusCode.Ok200,
+                        new IResponseField[]
+                        {
+                            new FieldServer(HttpConstant.ServerName),
+                            new FieldAcceptRanges(HttpConstant.AcceptRanges),
+                            new FieldContentType("text/html")
+                        }, "HTTP/1.1");
+                    var header = headers.Compile();
+                    if (!await ctx.SafeWriteAsync(header.Item1, header.Item2)) return;
+                    await ctx.SafeWriteAsync(data);
+                });
+                HttpHandleStore.AddHandler(handler);
+            }
+            else
+            {
+                var handler = new SpecialHandler(handle, async (ctx) =>
+                {
+                    var data = Encoding.UTF8.GetBytes(GetLatest());
+                    using var headers = new HttpResponseHeaders(data.Length, ResponseStatusCode.Ok200,
+                        new IResponseField[]
+                        {
+                            new FieldServer(HttpConstant.ServerName),
+                            new FieldAcceptRanges(HttpConstant.AcceptRanges),
+                            new FieldContentType("text/html"),
+                            new FieldAuthentication("Basic", "City Z"), 
+                        }, "HTTP/1.1");
+                    var header = headers.Compile();
+                    if (!await ctx.SafeWriteAsync(header.Item1, header.Item2)) return;
+                    await ctx.SafeWriteAsync(data);
+                }, new SpecialHandler.HttpAuthOptions(creds.Value.User, creds.Value.Password));
+                HttpHandleStore.AddHandler(handler);
+            }
         }
 
         public void AddEntry(string text)

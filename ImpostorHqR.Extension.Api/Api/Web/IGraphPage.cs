@@ -8,6 +8,7 @@ namespace ImpostorHqR.Extension.Api.Api.Web
         #region Provider
 
         private static Converter<(IGraph[], string, string, byte), IGraphPage> _Provider;
+        private static Converter<(IGraph[], string, string, byte, WebPageAuthenticationOption), IGraphPage> _SecureProvider;
 
         /// <summary>
         /// This function will slice and splice code in order to create a graph page that will be automatically registered and ready to use.
@@ -20,6 +21,11 @@ namespace ImpostorHqR.Extension.Api.Api.Web
         public static IGraphPage Create(IGraph[] graphs, string title, string handle, byte widthPercent)
         {
             return _Provider.Invoke((graphs, title, handle, widthPercent));
+        }
+
+        public static IGraphPage Create(IGraph[] graphs, string title, string handle, byte widthPercent, WebPageAuthenticationOption credentials)
+        {
+            return _SecureProvider.Invoke((graphs, title, handle, widthPercent, credentials));
         }
 
         #endregion

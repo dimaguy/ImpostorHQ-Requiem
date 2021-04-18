@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using ImpostorHqR.Core.Configuration;
 using ImpostorHqR.Core.Web.Api.WebSockets.Handles;
@@ -30,7 +31,7 @@ namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiGraphPage
 
         private byte[] Stream { get; }
 
-        public ApiGraphPage(string handle, string title, ApiGraph[] graphs, byte width)
+        public ApiGraphPage(string handle, string title, ApiGraph[] graphs, byte width, WebPageAuthenticationOption? creds = null)
         {
             this.ApiHandle = handle;
             this.Title = title;
@@ -55,21 +56,41 @@ namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiGraphPage
 
             this.Code = GraphPageSplicer.SpliceFinalHtml(script, title, graphCodeHandles.ToArray(), width);
             using var ms = new MemoryStream();
-
-            using var headers = new HttpResponseHeaders(Code.Length, ResponseStatusCode.Ok200, new IResponseField[]
+            if (creds == null)
             {
-                new FieldAcceptRanges("bytes"),
-                new FieldContentType("text/html"),
-                new FieldServer(HttpConstant.ServerName)
-            }, "HTTP/1.1");
-            this.Header = headers.Compile();
-            ms.Write(Header.Item1,0,Header.Item2);
-            ms.Write(Encoding.UTF8.GetBytes(this.Code));
-            this.Stream = ms.ToArray();
-            var httpHandle = new SpecialHandler(handle, async(ctx)=>await ctx.SafeWriteAsync(Stream));
-            HttpHandleStore.AddHandler(httpHandle);
-            this.Api = new ApiHandleHolder(handle);
-            WebApiHandleStore.Add(this.Api);
+                using var headers = new HttpResponseHeaders(Code.Length, ResponseStatusCode.Ok200, new IResponseField[]
+                {
+                    new FieldAcceptRanges("bytes"),
+                    new FieldContentType("text/html"),
+                    new FieldServer(HttpConstant.ServerName)
+                }, "HTTP/1.1");
+                this.Header = headers.Compile();
+                ms.Write(Header.Item1, 0, Header.Item2);
+                ms.Write(Encoding.UTF8.GetBytes(this.Code));
+                this.Stream = ms.ToArray();
+                var httpHandle = new SpecialHandler(handle, async (ctx) => await ctx.SafeWriteAsync(Stream));
+                HttpHandleStore.AddHandler(httpHandle);
+                this.Api = new ApiHandleHolder(handle);
+                WebApiHandleStore.Add(this.Api);
+            }
+            else
+            {
+                using var headers = new HttpResponseHeaders(Code.Length, ResponseStatusCode.Ok200, new IResponseField[]
+                {
+                    new FieldAcceptRanges("bytes"),
+                    new FieldContentType("text/html"),
+                    new FieldServer(HttpConstant.ServerName),
+                    new FieldAuthentication("Basic", "New Lantea"), 
+                }, "HTTP/1.1");
+                this.Header = headers.Compile();
+                ms.Write(Header.Item1, 0, Header.Item2);
+                ms.Write(Encoding.UTF8.GetBytes(this.Code));
+                this.Stream = ms.ToArray();
+                var httpHandle = new SpecialHandler(handle, async (ctx) => await ctx.SafeWriteAsync(Stream), new SpecialHandler.HttpAuthOptions(creds.Value.User, creds.Value.Password));
+                HttpHandleStore.AddHandler(httpHandle);
+                this.Api = new ApiHandleHolder(handle);
+                WebApiHandleStore.Add(this.Api);
+            }
         }
 
         private (byte[], int) Header { get; }

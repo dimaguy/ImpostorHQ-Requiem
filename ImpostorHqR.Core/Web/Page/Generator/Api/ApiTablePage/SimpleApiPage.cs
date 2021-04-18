@@ -30,7 +30,7 @@ namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiTablePage
 
         private byte[] HtmlBytes { get; }
 
-        public SimpleApiPage(Color elementColor, string title, string handle)
+        public SimpleApiPage(Color elementColor, string title, string handle, WebPageAuthenticationOption? creds = null)
         {
             if (WebApiHandleStore.Handles.Any(h => h.HandleId.Equals(handle)))
             {
@@ -55,23 +55,49 @@ namespace ImpostorHqR.Core.Web.Page.Generator.Api.ApiTablePage
             this.Html = this.Html.Replace(SimpleApiPageSplicerConstant.ReplaceInColor, GetColor());
             this.Html = this.Html.Replace(SimpleApiPageSplicerConstant.ReplaceInPort, IConfigurationStore.GetByType<RequiemConfig>().ApiPort.ToString());
             this.Html = this.Html.Replace(SimpleApiPageSplicerConstant.ReplaceInHandle, handle);
-            using (var ms = new MemoryStream())
+            if (creds == null)
             {
-                using var headers = new HttpResponseHeaders(this.Html.Length, ResponseStatusCode.Ok200, new IResponseField[] {
-                    new FieldAcceptRanges(HttpConstant.AcceptRanges),
-                    new FieldServer(HttpConstant.ServerName),
-                    new FieldContentType("text/html")
-                }, "HTTP/1.1");
-                var h = headers.Compile();
-                ms.Write(h.Item1,0,h.Item2);
-                ms.Write(Encoding.UTF8.GetBytes(this.Html));
-                this.HtmlBytes = ms.ToArray();
+                using (var ms = new MemoryStream())
+                {
+                    using var headers = new HttpResponseHeaders(this.Html.Length, ResponseStatusCode.Ok200,
+                        new IResponseField[]
+                        {
+                            new FieldAcceptRanges(HttpConstant.AcceptRanges),
+                            new FieldServer(HttpConstant.ServerName),
+                            new FieldContentType("text/html")
+                        }, "HTTP/1.1");
+                    var h = headers.Compile();
+                    ms.Write(h.Item1, 0, h.Item2);
+                    ms.Write(Encoding.UTF8.GetBytes(this.Html));
+                    this.HtmlBytes = ms.ToArray();
+                }
+
+                var webHandle = new SpecialHandler(handle,
+                    async (client) => { await client.SafeWriteAsync(this.HtmlBytes); });
+                HttpHandleStore.AddHandler(webHandle);
             }
-            var webHandle = new SpecialHandler(handle, async (client) =>
+            else
             {
-                await client.SafeWriteAsync(this.HtmlBytes);
-            });
-            HttpHandleStore.AddHandler(webHandle);
+                using (var ms = new MemoryStream())
+                {
+                    using var headers = new HttpResponseHeaders(this.Html.Length, ResponseStatusCode.Ok200,
+                        new IResponseField[]
+                        {
+                            new FieldAcceptRanges(HttpConstant.AcceptRanges),
+                            new FieldServer(HttpConstant.ServerName),
+                            new FieldContentType("text/html"),
+                            new FieldAuthentication("Basic","The Planet of Hala"), 
+                        }, "HTTP/1.1");
+                    var h = headers.Compile();
+                    ms.Write(h.Item1, 0, h.Item2);
+                    ms.Write(Encoding.UTF8.GetBytes(this.Html));
+                    this.HtmlBytes = ms.ToArray();
+                }
+
+                var webHandle = new SpecialHandler(handle,
+                    async (client) => { await client.SafeWriteAsync(this.HtmlBytes); }, new SpecialHandler.HttpAuthOptions(creds.Value.User, creds.Value.Password));
+                HttpHandleStore.AddHandler(webHandle);
+            }
         }
 
         private string GetColor()

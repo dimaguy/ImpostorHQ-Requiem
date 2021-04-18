@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Timers;
 using ImpostorHqR.Extension.Api;
 using ImpostorHqR.Extension.Api.Api.Web;
+using ImpostorHqR.Extension.Api.Configuration;
 
 namespace ImpostorHqR.Extension.Graphs.Events.WebPages
 {
@@ -47,32 +48,69 @@ namespace ImpostorHqR.Extension.Graphs.Events.WebPages
 
         public EventWebPage()
         {
+            var cfg = IConfigurationStore.GetByType<WebPageConfig>();
+            Trace.Assert(!string.IsNullOrEmpty(cfg.EventsPageHandle), "Event page handle cannot be empty!");
+            Trace.Assert(cfg.EventsPageUpdateIntervalSeconds!=0, "Event page update interval must be larger than 0!");
             Start.OnClosed += Shutdown;
             CreateGraphs();
-            
-            this.Page = IGraphPage.Create(new IGraph[]
+
+            if (!cfg.EventsPageRequiresAuthentication)
             {
-                IGameAlterEventGraph,
-                IGameCreatedEventGraph,
-                IGameDestroyedEventGraph,
-                IGameEndedEventGraph,
-                IGamePlayerJoinedEventGraph,
-                IGamePlayerLeftEventGraph,
-                IGameStartedEventGraph,
-                IGameStartingEventGraph,
-                IPlayerChatEventGraph,
-                IPlayerCompletedTaskEventGraph,
-                IPlayerDestroyedEventGraph,
-                IPlayerExileEventGraph,
-                IPlayerMovementEventGraph,
-                IPlayerMurderEventGraph,
-                IPlayerSetStartCounterEventGraph,
-                IPlayerSpawnedEventGraph,
-                IPlayerStartMeetingEventGraph,
-                IPlayerVentEventGraph,
-                IMeetingEndedEventGraph,
-                IMeetingStartedEventGraph,
-            }, "Impostor All Events / second", Start.GetConfig().EventsPageHandle, Start.GetConfig().EventsPageWidth);
+                this.Page = IGraphPage.Create(new IGraph[] {
+                        IGameAlterEventGraph,
+                        IGameCreatedEventGraph,
+                        IGameDestroyedEventGraph,
+                        IGameEndedEventGraph,
+                        IGamePlayerJoinedEventGraph,
+                        IGamePlayerLeftEventGraph,
+                        IGameStartedEventGraph,
+                        IGameStartingEventGraph,
+                        IPlayerChatEventGraph,
+                        IPlayerCompletedTaskEventGraph,
+                        IPlayerDestroyedEventGraph,
+                        IPlayerExileEventGraph,
+                        IPlayerMovementEventGraph,
+                        IPlayerMurderEventGraph,
+                        IPlayerSetStartCounterEventGraph,
+                        IPlayerSpawnedEventGraph,
+                        IPlayerStartMeetingEventGraph,
+                        IPlayerVentEventGraph,
+                        IMeetingEndedEventGraph,
+                        IMeetingStartedEventGraph,
+
+                    }, "Impostor All Events / second", cfg.EventsPageHandle,
+                    cfg.EventsPageWidth);
+            }
+            else
+            {
+                Trace.Assert(!string.IsNullOrEmpty(cfg.EventsPageUser), "Event page user cannot be empty!");
+                Trace.Assert(!string.IsNullOrEmpty(cfg.EventsPagePassword), "Event page password cannot be empty!");
+
+                this.Page = IGraphPage.Create(new IGraph[] {
+                        IGameAlterEventGraph,
+                        IGameCreatedEventGraph,
+                        IGameDestroyedEventGraph,
+                        IGameEndedEventGraph,
+                        IGamePlayerJoinedEventGraph,
+                        IGamePlayerLeftEventGraph,
+                        IGameStartedEventGraph,
+                        IGameStartingEventGraph,
+                        IPlayerChatEventGraph,
+                        IPlayerCompletedTaskEventGraph,
+                        IPlayerDestroyedEventGraph,
+                        IPlayerExileEventGraph,
+                        IPlayerMovementEventGraph,
+                        IPlayerMurderEventGraph,
+                        IPlayerSetStartCounterEventGraph,
+                        IPlayerSpawnedEventGraph,
+                        IPlayerStartMeetingEventGraph,
+                        IPlayerVentEventGraph,
+                        IMeetingEndedEventGraph,
+                        IMeetingStartedEventGraph,
+
+                    }, "Impostor All Events / second", cfg.EventsPageHandle,
+                    cfg.EventsPageWidth, new WebPageAuthenticationOption(cfg.EventsPageUser, cfg.EventsPagePassword));
+            }
             Tmr = new System.Timers.Timer(Start.GetConfig().EventsPageUpdateIntervalSeconds * 1000)
             {
                 AutoReset = true
