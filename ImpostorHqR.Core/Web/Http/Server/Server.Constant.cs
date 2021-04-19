@@ -9,6 +9,8 @@ namespace ImpostorHqR.Core.Web.Http.Server
 
         public const string NotImplemented501 = "<h1> Seems like you hit the wrong button. </h1>";
 
+        public const string NotAuthorized401 = "<h1> Authentication is required. </h1>";
+
         public const int FileBufferSize = 1024 * 8;
 
         public const int ReadTimeout = 5000;

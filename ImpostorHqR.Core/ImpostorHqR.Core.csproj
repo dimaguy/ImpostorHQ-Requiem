@@ -31,7 +31,6 @@
   <ItemGroup>
     <Folder Include="Extension\Helper\" />
     <Folder Include="ObjectPool\" />
-    <Folder Include="Web\Api\WebSockets\" />
   </ItemGroup>
 
   <ItemGroup>

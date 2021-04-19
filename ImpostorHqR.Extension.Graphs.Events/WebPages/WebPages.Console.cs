@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.Runtime.InteropServices.ComTypes;
@@ -32,9 +33,18 @@ namespace ImpostorHqR.Extension.Graphs.Events.WebPages
 
         public ConsoleWebPage()
         {
-            if (!Start.GetConfig().EnableEventsPage) return;
+            var cfg = Start.GetConfig();
+            if (!cfg.EnableEventsPage) return;
+            Trace.Assert(!string.IsNullOrEmpty(cfg.ChatPageHandle), "Chat page handle cannot be empty!");
             Start.OnClosed += Shutdown;
-            this.Page = IReadonlyConsolePage.Create("Server-Wide Chat", Color.Lime, "Game chat will be displayed here.", Start.GetConfig().ChatPageHandle);
+            if(!cfg.ChatPageRequiresAuthentication) this.Page = IReadonlyConsolePage.Create("Server-Wide Chat", Color.Lime, "Game chat will be displayed here.", Start.GetConfig().ChatPageHandle);
+            else
+            {
+                Trace.Assert(!string.IsNullOrEmpty(cfg.ChatPageUser), "Chat page user cannot be empty!");
+                Trace.Assert(!string.IsNullOrEmpty(cfg.ChatPagePassword), "Chat page password cannot be empty!");
+
+                this.Page = IReadonlyConsolePage.Create("Server-Wide Chat", Color.Lime, "Game chat will be displayed here.", cfg.ChatPageHandle, new WebPageAuthenticationOption(cfg.ChatPageUser, cfg.ChatPagePassword));
+            }
             _ = QueueAndSend();
         }
 
