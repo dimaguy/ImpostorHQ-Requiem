@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
 using ImpostorHqR.Core.Logging;
 using ImpostorHqR.Core.Web.Http.Handler;
+using ImpostorHqR.Core.Web.Http.Server.Client;
 using ImpostorHqR.Core.Web.Http.Server.Request.Fields;
+using ImpostorHqR.Core.Web.Http.Server.Response;
 
 namespace ImpostorHqR.Core.Web.Http.Server.Request
 {
@@ -17,7 +20,7 @@ namespace ImpostorHqR.Core.Web.Http.Server.Request
         private static readonly bool Windows = (System.Environment.OSVersion.Platform == PlatformID.Win32NT);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static HttpInitialRequest? ParseRequest(string str)
+        public static HttpInitialRequest? ParseRequest(string str, Stream transport)
         {
             var data = str.AsSpan();
 
@@ -31,6 +34,23 @@ namespace ImpostorHqR.Core.Web.Http.Server.Request
             data = data.Slice(start);
 
             var path = data.Slice(1, data.IndexOf(' ') - 1);
+            if (path.Length == 0 || isEmpty(path))
+            {
+                transport.WriteAsync(HttpErrorResponses.NotFoundResponse).ConfigureAwait(false);
+                return null;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static bool isEmpty(ReadOnlySpan<char> chars)
+            {
+                foreach (var c in chars)
+                {
+                    if (!char.IsWhiteSpace(c)) return false;
+                }
+
+                return true;
+            }
+
             VerifyPathPlatform(ref path);
             result.Path = new string(path);
 

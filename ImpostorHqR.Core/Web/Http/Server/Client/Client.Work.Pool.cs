@@ -68,11 +68,10 @@ namespace ImpostorHqR.Core.Web.Http.Server.Client
                 var stream = Ssl
                     ? await AuthenticateSsl(tcpClient)
                     : new NetworkStream(tcpClient);
-
                 var requestData = await HttpLineReader.ReadLineSizedBuffered(stream, 2048);
                 if (requestData == null || requestData.Length < 10) return;
 
-                var request = HttpRequestParser.ParseRequest(requestData);
+                var request = HttpRequestParser.ParseRequest(requestData, stream);
                 if (request == null) return;
 
                 using var holder = new HttpClientHolder(stream, tcpClient, (HttpInitialRequest) request);
